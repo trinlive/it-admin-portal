@@ -1,38 +1,42 @@
+require('dotenv').config();
 const express = require('express');
 const ActiveDirectory = require('activedirectory2');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 const app = express();
 
+app.set('view engine', 'ejs');
+app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors());
+
 const config = {
-    url: process.env.AD_URL || 'ldap://samba-ad',
+    url: process.env.AD_URL || 'ldap://localhost', // วิ่งหา Samba ในเครื่องเดียวกัน
     baseDN: process.env.AD_BASE_DN,
     username: process.env.AD_USER,
-    password: process.env.AD_PASS
+    password: process.env.AD_PASS,
+    attributes: {
+        user: ['cn', 'sAMAccountName', 'mail', 'department', 'description', 'whenCreated']
+    }
 };
 
 const ad = new ActiveDirectory(config);
 
+// หน้า Dashboard แสดงรายชื่อ User
 app.get('/', (req, res) => {
-    res.send('IT Admin Portal is Running! <br> Try /test-ad to check connection.');
-});
-
-app.get('/test-ad', (req, res) => {
-    // ลองค้นหา User "testuser" ที่เราสร้างไว้
-    ad.findUser('testuser', function(err, user) {
+    const query = '(&(objectClass=user)(objectCategory=person))';
+    ad.findUsers(query, (err, users) => {
         if (err) {
-            console.log('ERROR: ' + JSON.stringify(err));
-            res.status(500).send('❌ Connection Failed: ' + err.message);
-            return;
+            console.error('ERROR:', JSON.stringify(err));
+            return res.render('index', { users: [], error: err.message });
         }
-
-        if (!user) {
-            res.send('⚠️ Connection OK, but User "testuser" not found.');
-        } else {
-            res.send('✅ <b>Connection SUCCESS!</b><br>Found User: ' + user.sAMAccountName + '<br>DN: ' + user.dn);
-        }
+        // เรียงชื่อ A-Z
+        if(users) users.sort((a, b) => (a.cn || '').localeCompare(b.cn || ''));
+        res.render('index', { users: users, error: null });
     });
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 IT Admin Portal running on port ${PORT}`);
 });
