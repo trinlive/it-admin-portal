@@ -1,50 +1,255 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IT Admin Portal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        body.swal2-shown>[aria-hidden="true"] { transition: 0.1s filter; filter: blur(4px); }
+        
+        /* CSS สำหรับปุ่ม + Group ให้ดูน่ากด */
+        .group-more-btn:hover {
+            transform: scale(1.05);
+            background-color: #e2e8f0; /* slate-200 */
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="#">🔐 IT Admin Portal</a>
-        </div>
-    </nav>
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3>👥 รายชื่อผู้ใช้งาน (Active Directory)</h3>
-            <button class="btn btn-success">+ สร้าง User ใหม่</button>
-        </div>
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Username</th>
-                            <th>ชื่อ-นามสกุล</th>
-                            <th>อีเมล</th>
-                            <th>แผนก</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (users && users.length > 0) { %>
-                            <% users.forEach(function(user) { %>
-                                <tr>
-                                    <td><span class="badge bg-primary"><%= user.sAMAccountName %></span></td>
-                                    <td><%= user.cn %></td>
-                                    <td><%= user.mail || '-' %></td>
-                                    <td><%= user.department || '-' %></td>
-                                </tr>
-                            <% }); %>
-                        <% } else { %>
-                            <tr><td colspan="4" class="text-center">ไม่พบข้อมูล</td></tr>
-                        <% } %>
-                    </tbody>
-                </table>
+
+<body class="bg-slate-50 text-slate-800">
+
+    <nav class="bg-slate-900 text-white shadow-xl sticky top-0 z-40 border-b border-slate-800">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" class="text-xl font-bold flex items-center gap-3 hover:text-slate-200 transition">
+                <div class="bg-gradient-to-tr from-blue-500 to-cyan-400 p-2 rounded-lg shadow-lg">
+                    <i class="fa-solid fa-shield-halved text-white text-lg"></i>
+                </div>
+                IT Admin Portal
+            </a>
+            <div class="flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full border border-slate-700">
+                <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs text-slate-400 font-medium">System Online</span>
             </div>
         </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+
+        <div class="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
+            <div>
+                <h3 class="text-3xl font-bold text-slate-800 tracking-tight">รายชื่อผู้ใช้งาน</h3>
+                <p class="text-slate-500 mt-1 flex items-center gap-2">
+                    <i class="fa-brands fa-windows text-blue-500"></i> Active Directory Management
+                </p>
+            </div>
+            <a href="/create"
+                class="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white transition-all duration-200 bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg hover:shadow-emerald-500/30">
+                <i class="fa-solid fa-user-plus mr-2 group-hover:scale-110 transition-transform"></i>
+                สร้าง User ใหม่
+            </a>
+        </div>
+
+        <%- include('filter') %>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse" id="userTable">
+                        <thead>
+                            <tr class="bg-slate-50/50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                                <th class="py-3 px-4 w-[15%]">Username</th>
+                                <th class="py-3 px-4 w-[20%]">ชื่อ-นามสกุล</th>
+                                <th class="py-3 px-4 w-[15%]">อีเมล</th>
+                                <th class="py-3 px-4 w-[10%]">แผนก</th>
+                                <th class="py-3 px-4 w-[15%]">ใช้งานล่าสุด</th>
+                                <th class="py-3 px-4 w-[15%]">Groups</th>
+                                <th class="py-3 px-4 text-center w-[10%]">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-sm">
+                            <% if (users && users.length> 0) { %>
+                                <% users.forEach(function(user) { %>
+                                    <tr class="hover:bg-blue-50/30 transition duration-200 group user-row"
+                                        data-search="<%= (user.sAMAccountName + ' ' + user.cn + ' ' + (user.mail||'')).toLowerCase() %>"
+                                        data-dept="<%= (user.department || 'Other') %>"
+                                        data-date="<%= user.simpleDate || '' %>">
+
+                                        <td class="py-3 px-4">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-xs group-hover:bg-blue-100 group-hover:text-blue-600 transition">
+                                                    <i class="fa-regular fa-user"></i>
+                                                </div>
+                                                <span class="font-semibold text-slate-700 truncate max-w-[120px]" title="<%= user.sAMAccountName %>">
+                                                    <%= user.sAMAccountName %>
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        <td class="py-3 px-4 font-medium text-slate-600">
+                                            <div class="truncate max-w-[180px]" title="<%= user.cn %>">
+                                                <%= user.cn %>
+                                            </div>
+                                        </td>
+
+                                        <td class="py-3 px-4 text-slate-500">
+                                            <div class="truncate max-w-[150px]" title="<%= user.mail || '-' %>">
+                                                <%= user.mail || '-' %>
+                                            </div>
+                                        </td>
+
+                                        <td class="py-3 px-4">
+                                            <% if(user.department) { %>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">
+                                                    <%= user.department %>
+                                                </span>
+                                            <% } else { %>
+                                                <span class="text-slate-300">-</span>
+                                            <% } %>
+                                        </td>
+                                        
+                                        <td class="py-3 px-4">
+                                            <% if (user.lastLoginStr !== '-') { %>
+                                                <div class="flex items-center gap-1.5 text-slate-600 font-medium text-xs whitespace-nowrap">
+                                                    <i class="fa-regular fa-clock text-emerald-500"></i>
+                                                    <span><%= user.lastLoginStr %></span>
+                                                </div>
+                                            <% } else { %>
+                                                <span class="text-slate-400 text-[10px] italic">
+                                                    Never
+                                                </span>
+                                            <% } %>
+                                        </td>
+
+                                        <td class="py-3 px-4">
+                                            <div class="flex items-center gap-1">
+                                                <% if (user.groupsList && user.groupsList.length > 0) { %>
+                                                    
+                                                    <% const showLimit = 1; %>
+                                                    <% user.groupsList.slice(0, showLimit).forEach(function(group) { %>
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 whitespace-nowrap max-w-[100px] truncate">
+                                                            <%= group %>
+                                                        </span>
+                                                    <% }); %>
+
+                                                    <% if (user.groupsList.length > showLimit) { %>
+                                                        <button type="button" 
+                                                                onclick="showAllGroups(this)"
+                                                                data-name="<%= user.sAMAccountName %>"
+                                                                data-groups='<%= JSON.stringify(user.groupsList) %>'
+                                                                class="group-more-btn inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300 cursor-pointer whitespace-nowrap transition-all shadow-sm">
+                                                            +<%= user.groupsList.length - showLimit %>
+                                                        </button>
+                                                    <% } %>
+
+                                                <% } else { %>
+                                                    <span class="text-slate-300 text-xs">-</span>
+                                                <% } %>
+                                            </div>
+                                        </td>
+
+                                        <td class="py-3 px-4 text-center">
+                                            <div class="flex items-center justify-center gap-1 opacity-100 sm:opacity-60 group-hover:opacity-100 transition-opacity">
+                                                
+                                                <% if (!['Administrator', 'Guest', 'krbtgt'].includes(user.sAMAccountName)) { %>
+                                                    <a href="/edit/<%= user.sAMAccountName %>"
+                                                        class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                                                        title="แก้ไข">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </a>
+                                                <% } %>
+
+                                                <% if (!['Guest', 'krbtgt'].includes(user.sAMAccountName)) { %>
+                                                    <button type="button"
+                                                        onclick="promptResetPassword('<%= user.dn %>', '<%= user.sAMAccountName %>')"
+                                                        class="p-1.5 text-slate-400 hover:text-yellow-500 hover:bg-yellow-50 rounded transition"
+                                                        title="รีเซ็ตรหัสผ่าน">
+                                                        <i class="fa-solid fa-key"></i>
+                                                    </button>
+                                                <% } %>
+
+                                                <% if (!['Administrator', 'Guest', 'krbtgt'].includes(user.sAMAccountName)) { %>
+                                                    <form action="/users/delete" method="POST" class="inline delete-form">
+                                                        <input type="hidden" name="dn" value="<%= user.dn %>">
+                                                        <button type="button"
+                                                            onclick="confirmDelete(this, '<%= user.cn %>')"
+                                                            class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                                                            title="ลบผู้ใช้">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </button>
+                                                    </form>
+                                                <% } else { %>
+                                                    <% if (user.sAMAccountName === 'Administrator') { %>
+                                                        <span class="p-1.5 text-blue-300 cursor-help" title="Built-in Administrator">
+                                                            <i class="fa-solid fa-user-shield"></i>
+                                                        </span>
+                                                    <% } else { %>
+                                                        <span class="p-1.5 text-slate-200 cursor-not-allowed">
+                                                            <i class="fa-solid fa-lock"></i>
+                                                        </span>
+                                                    <% } %>
+                                                <% } %>
+
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="7" class="py-12 text-center text-slate-400">
+                                            <div class="flex flex-col items-center justify-center">
+                                                <div class="bg-slate-50 p-4 rounded-full mb-3">
+                                                    <i class="fa-solid fa-inbox text-3xl text-slate-300"></i>
+                                                </div>
+                                                <span>ไม่พบข้อมูลผู้ใช้งานในระบบ</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% } %>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+                    <span><i class="fa-solid fa-server mr-1"></i> Data from Samba AD</span>
+                    <span class="font-medium">Total: <%= users ? users.length : 0 %> users</span>
+                </div>
+            </div>
     </div>
+
+    <script src="/js/script.js"></script>
+    
+    <script>
+        function showAllGroups(btn) {
+            const groupsStr = btn.getAttribute('data-groups');
+            const username = btn.getAttribute('data-name');
+            const groups = JSON.parse(groupsStr); // แปลงกลับเป็น Array
+
+            // สร้าง HTML สำหรับแสดงใน Popup
+            let groupsHtml = '<div class="flex flex-wrap gap-2 justify-center">';
+            groups.forEach(g => {
+                groupsHtml += `<span class="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-sm font-medium">${g}</span>`;
+            });
+            groupsHtml += '</div>';
+
+            Swal.fire({
+                title: `Groups of ${username}`,
+                html: groupsHtml,
+                icon: 'info',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#64748b' // สีเทาๆ เข้ากับธีม
+            });
+        }
+    </script>
+
 </body>
 </html>

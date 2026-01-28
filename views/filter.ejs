@@ -1,0 +1,65 @@
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6">
+
+    <div class="flex flex-col xl:flex-row gap-4 justify-between items-end xl:items-center">
+
+        <div class="flex flex-col md:flex-row gap-3 flex-grow w-full xl:w-auto">
+
+            <div class="relative flex-grow">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                </div>
+                <input type="text" id="searchInput" onkeyup="filterTable()"
+                    class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition text-sm font-sans"
+                    placeholder="ค้นหาชื่อ, Username, อีเมล...">
+            </div>
+
+            <div class="relative w-full md:w-64">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-building text-slate-400"></i>
+                </div>
+                <select id="departmentFilter" onchange="filterTable()"
+                    class="block w-full pl-9 pr-8 py-2.5 border border-slate-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none cursor-pointer text-slate-600 font-medium truncate font-sans">
+                    <option value="">ทุกแผนก (All Departments)</option>
+                    <% let uniqueDepts=[...new Set(users.map(u=> (u.department || 'Other').trim()))].sort();
+                        uniqueDepts.forEach(dept => {
+                        %>
+                        <option value="<%= dept %>">
+                            <%= dept %>
+                        </option>
+                        <% }); %>
+                </select>
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                </div>
+            </div>
+        </div>
+
+        <div
+            class="flex items-center gap-3 w-full xl:w-auto justify-between xl:justify-end border-t xl:border-0 border-slate-100 pt-3 xl:pt-0">
+
+            <div
+                class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 shadow-sm whitespace-nowrap">
+                <i class="fa-solid fa-users mr-1 text-slate-500"></i>
+                <span id="totalRecordsDisplay">
+                    <%= users.length %>
+                </span> รายการ
+            </div>
+
+            <div class="h-6 w-px bg-slate-300 mx-1 hidden sm:block"></div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="clearFilter()"
+                    class="bg-white hover:bg-red-50 text-slate-500 hover:text-red-500 border border-slate-300 hover:border-red-300 rounded-lg shadow-sm transition-all w-9 h-9 flex items-center justify-center shrink-0"
+                    title="ล้างตัวกรอง">
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                </button>
+
+                <button onclick="window.location.href='/'"
+                    class="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border border-slate-300 hover:border-blue-600 rounded-lg shadow-sm transition-all group w-9 h-9 flex items-center justify-center shrink-0"
+                    title="ดึงข้อมูลล่าสุด">
+                    <i class="fa-solid fa-rotate group-hover:animate-spin"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

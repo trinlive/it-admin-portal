@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New User - IT Admin Portal</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        
+        /* ✅ CSS สำหรับสถานะการตรวจสอบรหัสผ่าน */
+        .valid-req { color: #059669 !important; font-weight: 700; } 
+        .valid-req i { color: #059669 !important; }
+        .valid-req i::before { content: "\f00c"; } /* เปลี่ยนเป็นเครื่องหมายถูก */
+        
+        .invalid-req { color: #94a3b8; }
+        .invalid-req i { color: #cbd5e1; }
+        
+        .error-req { color: #ef4444 !important; font-weight: 700; }
+        .error-req i { color: #ef4444 !important; }
+        .error-req i::before { content: "\f00d"; } /* เปลี่ยนเป็นเครื่องหมายกากบาท */
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <nav class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <a href="/" class="text-lg font-bold flex items-center gap-2 hover:text-slate-200 transition w-fit">
+                <i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-10 flex-grow flex items-center justify-center">
+        <div class="w-full max-w-3xl">
+            
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-6 text-white">
+                    <h4 class="text-2xl font-bold flex items-center gap-3">
+                        <i class="fa-solid fa-user-plus bg-white/20 p-2 rounded-lg"></i> 
+                        สร้างผู้ใช้งานใหม่ (Create User)
+                    </h4>
+                    <p class="text-emerald-50 text-sm mt-2 ml-1 opacity-90">กรอกข้อมูลเพื่อเพิ่มพนักงานลงใน Active Directory</p>
+                </div>
+
+                <div class="p-8">
+                    <form action="/users/create" method="POST" class="space-y-6" id="createForm">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">ชื่อจริง (First Name) <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-regular fa-user"></i></span>
+                                    <input type="text" name="firstName" required placeholder="สมชาย"
+                                        class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-slate-50 focus:bg-white">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">นามสกุล (Last Name) <span class="text-red-500">*</span></label>
+                                <input type="text" name="lastName" required placeholder="ใจดี"
+                                    class="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-slate-50 focus:bg-white">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Username (สำหรับ Login) <span class="text-red-500">*</span></label>
+                            <div class="relative group">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 group-focus-within:text-emerald-600 transition"><i class="fa-solid fa-desktop"></i></span>
+                                <input type="text" name="username" id="usernameInput" placeholder="เช่น somchai.j" required 
+                                    class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-slate-50 focus:bg-white font-medium text-slate-700">
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1.5 ml-1">ใช้ภาษาอังกฤษตัวพิมพ์เล็กเท่านั้น</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">อีเมล (Email)</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-regular fa-envelope"></i></span>
+                                    <input type="email" name="email" placeholder="user@biccorp.com"
+                                        class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-slate-50 focus:bg-white">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">แผนก (Department)</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-building"></i></span>
+                                    <input type="text" name="department" placeholder="เช่น IT, HR, Sales"
+                                        class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-slate-50 focus:bg-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 mt-4">
+                            <label class="block text-sm font-bold text-slate-800 mb-2 mt-4">กำหนดรหัสผ่าน <span class="text-red-500">*</span></label>
+                            
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-key"></i></span>
+                                        <input type="password" name="password" id="passwordInput" required onkeyup="checkPassword()" placeholder="ตั้งรหัสผ่าน..."
+                                            class="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-slate-50 focus:bg-white font-medium">
+                                        
+                                        <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition outline-none">
+                                            <i class="fa-regular fa-eye" id="eyeIcon"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-slate-400 mt-2 ml-1"><i class="fa-solid fa-circle-info mr-1"></i> ใช้สำหรับ Login ครั้งแรก</p>
+                                </div>
+
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600 shadow-sm">
+                                    <p class="font-bold text-slate-700 mb-2 text-xs uppercase tracking-wide">
+                                        <i class="fa-solid fa-shield-halved mr-1.5"></i> Password Strength
+                                    </p>
+                                    <ul class="space-y-1.5 text-xs font-medium transition-all">
+                                        <li id="req-length" class="flex items-start gap-2 invalid-req transition-colors duration-300">
+                                            <i class="fa-solid fa-circle mt-1 text-[8px]"></i> <span>ความยาวอย่างน้อย 8 ตัวอักษร</span>
+                                        </li>
+                                        <li id="req-complex" class="flex items-start gap-2 invalid-req transition-colors duration-300">
+                                            <i class="fa-solid fa-circle mt-1 text-[8px]"></i> <span>มี A-Z, a-z และ 0-9 ผสมกัน</span>
+                                        </li>
+                                        <li id="req-user" class="flex items-start gap-2 invalid-req transition-colors duration-300">
+                                            <i class="fa-solid fa-circle mt-1 text-[8px]"></i> <span>ไม่ใช้ชื่อ User เป็นส่วนประกอบ</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-6 flex items-center justify-end gap-3 mt-6">
+                            <a href="/" class="px-5 py-2.5 rounded-xl text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 font-medium transition duration-200">
+                                ยกเลิก
+                            </a>
+                            <button type="submit" id="submitBtn" disabled class="px-6 py-2.5 rounded-xl text-white bg-slate-400 cursor-not-allowed font-bold shadow-md transition duration-200">
+                                <i class="fa-solid fa-check mr-2"></i>ยืนยันการสร้าง
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle Password Visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('passwordInput');
+            const eyeIcon = document.getElementById('eyeIcon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        // ✅ ฟังก์ชันตรวจสอบรหัสผ่านแบบ Real-time
+        function checkPassword() {
+            const password = document.getElementById('passwordInput').value;
+            const username = document.getElementById('usernameInput').value.toLowerCase();
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Elements ที่จะเปลี่ยนสี
+            const reqLength = document.getElementById('req-length');
+            const reqComplex = document.getElementById('req-complex');
+            const reqUser = document.getElementById('req-user');
+
+            // 1. ตรวจความยาว (Length Check)
+            const isLengthValid = password.length >= 8;
+            updateStatus(reqLength, isLengthValid);
+
+            // 2. ตรวจความซับซ้อน (Complexity Check)
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSpecial = /[!@#$%^&*]/.test(password);
+            
+            // ผ่านถ้ามี: ตัวใหญ่ + ตัวเล็ก + (ตัวเลข หรือ อักขระพิเศษ)
+            const isComplexValid = (hasUpper && hasLower && (hasNumber || hasSpecial));
+            updateStatus(reqComplex, isComplexValid);
+
+            // 3. ตรวจชื่อ Username (Containment Check)
+            let isUserValid = true;
+            if (username.length > 2 && password.toLowerCase().includes(username)) {
+                isUserValid = false;
+            }
+            if(password.length === 0) isUserValid = true; // ถ้ายังไม่พิมพ์ถือว่าผ่านไปก่อน
+
+            // Logic พิเศษสำหรับ Username: ถ้าผิดให้แดง (Error), ถ้าถูกให้เขียว
+            if (!isUserValid) {
+                reqUser.className = 'flex items-start gap-2 error-req transition-colors duration-300';
+            } else if (password.length > 0) {
+                reqUser.className = 'flex items-start gap-2 valid-req transition-colors duration-300';
+            } else {
+                reqUser.className = 'flex items-start gap-2 invalid-req transition-colors duration-300';
+            }
+
+            // เปิด/ปิด ปุ่ม Submit
+            if (isLengthValid && isComplexValid && isUserValid) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('bg-slate-400', 'cursor-not-allowed');
+                submitBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'hover:-translate-y-0.5');
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed');
+                submitBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'hover:-translate-y-0.5');
+            }
+        }
+
+        // Helper Function เปลี่ยนคลาส CSS
+        function updateStatus(element, isValid) {
+            if (isValid) {
+                element.className = 'flex items-start gap-2 valid-req transition-colors duration-300';
+            } else {
+                element.className = 'flex items-start gap-2 invalid-req transition-colors duration-300';
+            }
+        }
+    </script>
+
+</body>
+</html>
