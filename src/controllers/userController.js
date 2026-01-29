@@ -4,19 +4,23 @@ const ldap = require("ldapjs");
 const config = require("../config/ad");
 const { validatePassword } = require("../utils/validator");
 
-// Import Helpers ที่แยกออกไป
+// ✅ 1. Import Helpers
 const { 
     formatDate, 
     formatLastLogin, 
     formatGroups, 
     isSystemAccountStrict, 
-    isNonResetableAccount 
+    isNonResetableAccount,
+    isAccountDisabled 
 } = require("../utils/adHelpers");
 
 const { renderErrorPopup } = require("../utils/responseHelper");
 
 const ad = new ActiveDirectory(config);
 
+// --- User Management Controllers ---
+
+// แสดงหน้า Dashboard
 exports.getDashboard = (req, res) => {
     const query = "(&(objectClass=user)(objectCategory=person))";
     ad.findUsers(query, (err, users) => {
@@ -36,10 +40,12 @@ exports.getDashboard = (req, res) => {
     });
 };
 
+// แสดงหน้าสร้าง User
 exports.getCreatePage = (req, res) => {
     res.render("create");
 };
 
+// ประมวลผลการสร้าง User
 exports.createUser = (req, res) => {
     const passwordCheck = validatePassword(req.body.password, req.body.username);
     if (!passwordCheck.valid) {
@@ -71,7 +77,7 @@ exports.createUser = (req, res) => {
             if (err) {
                 console.error("Create Error:", err);
                 if (err.message.includes("already in use") || err.name === 'EntryAlreadyExistsError') {
-                    return renderErrorPopup(res, "ชื่อ Username ซ้ำ!", `ชื่อผู้ใช้ <b>"${req.body.username}"</b> มีอยู่ในระบบแล้ว`, "(Error: Entry Already Exists)");
+                    return renderErrorPopup(res, "ชื่อ Username ซ้ำ!", `ชื่อผู้ใช้ "${req.body.username}" มีอยู่ในระบบแล้ว`, "(Error: Entry Already Exists)");
                 }
                 return renderErrorPopup(res, "สร้าง User ไม่สำเร็จ", "เกิดข้อผิดพลาด", err.message);
             }
@@ -80,6 +86,7 @@ exports.createUser = (req, res) => {
     });
 };
 
+// ลบ User
 exports.deleteUser = (req, res) => {
     const userDN = req.body.dn;
     if (!userDN) return res.send("Error: Missing DN");
@@ -99,6 +106,7 @@ exports.deleteUser = (req, res) => {
     });
 };
 
+// แสดงหน้าแก้ไข User
 exports.getEditPage = (req, res) => {
     const username = req.params.username;
     if (isSystemAccountStrict(username)) {
@@ -110,6 +118,7 @@ exports.getEditPage = (req, res) => {
     });
 };
 
+// อัปเดตข้อมูล User
 exports.updateUser = (req, res) => {
     const userDN = req.body.dn;
     if (!userDN) return res.send("Error: Missing DN");
@@ -136,6 +145,7 @@ exports.updateUser = (req, res) => {
     });
 };
 
+// รีเซ็ตรหัสผ่าน
 exports.resetPassword = (req, res) => {
     const userDN = req.body.dn;
     const newPassword = req.body.newPassword;
@@ -155,6 +165,34 @@ exports.resetPassword = (req, res) => {
         client.modify(userDN, changes, (err) => {
             client.unbind();
             if (err) return renderErrorPopup(res, "เปลี่ยนรหัสไม่สำเร็จ", "อาจเกิดจาก Policy ของ AD หรือสิทธิ์ไม่เพียงพอ", err.message);
+            res.redirect("/");
+        });
+    });
+};
+
+// ✅ 2. ฟังก์ชันสลับสถานะเปิด/ปิดบัญชี (Toggle Status)
+exports.toggleUserStatus = (req, res) => {
+    const { dn, currentUac } = req.body;
+    
+    if (isSystemAccountStrict(dn)) {
+        return renderErrorPopup(res, "การกระทำถูกปฏิเสธ", "ไม่สามารถจัดการสถานะของ System Account ได้");
+    }
+
+    // สลับสถานะ (Bitwise XOR 2): 512 <-> 514
+    const newUacValue = parseInt(currentUac) ^ 2; 
+
+    const client = ldap.createClient({ url: config.url });
+    client.bind(config.username, config.password, (err) => {
+        if (err) return renderErrorPopup(res, "เชื่อมต่อ AD ไม่สำเร็จ", err.message);
+
+        const change = new ldap.Change({
+            operation: 'replace',
+            modification: { userAccountControl: newUacValue.toString() }
+        });
+
+        client.modify(dn, change, (err) => {
+            client.unbind();
+            if (err) return renderErrorPopup(res, "อัปเดตสถานะไม่สำเร็จ", err.message);
             res.redirect("/");
         });
     });

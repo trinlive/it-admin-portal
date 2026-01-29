@@ -1,8 +1,7 @@
 // ----------------------------------------------------------------------------
-// ฟังก์ชันสำหรับกรองข้อมูล (Filter Table) - ตัดวันที่ออกแล้ว ❌📅
+// ฟังก์ชันสำหรับกรองข้อมูลในตาราง (Real-time Filter)
 // ----------------------------------------------------------------------------
 function filterTable() {
-    // รับค่าจาก Input (เหลือแค่ Search กับ Department)
     const searchInput = document.getElementById('searchInput');
     const deptFilter = document.getElementById('departmentFilter');
 
@@ -15,17 +14,12 @@ function filterTable() {
     let count = 0;
 
     rows.forEach(row => {
-        // ดึงค่าที่ซ่อนไว้ใน data-attributes
         const searchData = row.getAttribute('data-search') || '';
         const deptData = row.getAttribute('data-dept') || '';
         
-        // 1. เช็คคำค้นหา (Search)
         const matchSearch = searchData.includes(searchValue);
-
-        // 2. เช็คแผนก (Department)
         const matchDept = deptValue === '' || deptData === deptValue;
 
-        // แสดงหรือซ่อนแถว
         if (matchSearch && matchDept) {
             row.style.display = '';
             count++;
@@ -34,11 +28,10 @@ function filterTable() {
         }
     });
 
-    // อัปเดตตัวเลขจำนวนรายการ
     updateCountDisplay(count);
 }
 
-// ฟังก์ชันอัปเดตตัวเลข
+// อัปเดตตัวเลขแสดงจำนวนรายการในหน้าเว็บ
 function updateCountDisplay(count) {
     const totalDisplay = document.getElementById('totalRecordsDisplay');
     const footerDisplay = document.getElementById('footerCount');
@@ -47,9 +40,7 @@ function updateCountDisplay(count) {
     if(footerDisplay) footerDisplay.textContent = count;
 }
 
-// ----------------------------------------------------------------------------
-// ฟังก์ชันล้างค่าตัวกรอง (Clear Filter)
-// ----------------------------------------------------------------------------
+// ล้างค่าตัวกรองทั้งหมด
 function clearFilter() {
     const inputs = ['searchInput', 'departmentFilter'];
     inputs.forEach(id => {
@@ -60,7 +51,7 @@ function clearFilter() {
 }
 
 // ----------------------------------------------------------------------------
-// ฟังก์ชันยืนยันการลบ (SweetAlert2)
+// ฟังก์ชันยืนยันการลบผู้ใช้ (Confirm Delete)
 // ----------------------------------------------------------------------------
 function confirmDelete(btn, name) {
     Swal.fire({
@@ -81,9 +72,7 @@ function confirmDelete(btn, name) {
             actions: 'gap-3',
             confirmButton: 'bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-lg hover:shadow-red-500/30 transition-all duration-200',
             cancelButton: 'bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-5 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200'
-        },
-        showClass: { popup: 'animate__animated animate__fadeInDown animate__faster' },
-        hideClass: { popup: 'animate__animated animate__fadeOutUp animate__faster' }
+        }
     }).then((result) => {
         if (result.isConfirmed) {
             btn.closest('form').submit();
@@ -100,7 +89,63 @@ function confirmDelete(btn, name) {
 }
 
 // ----------------------------------------------------------------------------
-// ✅ ฟังก์ชันสลับการแสดงรหัสผ่านใน Popup (Show/Hide Password)
+// ✅ ฟังก์ชันใหม่: ยืนยันการเปิด/ปิดบัญชี (Toggle Enable/Disable Status)
+// ----------------------------------------------------------------------------
+function confirmToggleStatus(dn, username, currentUac, isDisabled) {
+    const actionText = isDisabled ? 'เปิดใช้งาน (Enable)' : 'ปิดใช้งาน (Disable)';
+    const color = isDisabled ? '#059669' : '#ef4444';
+
+    Swal.fire({
+        title: `${actionText} บัญชีนี้?`,
+        html: `คุณต้องการเปลี่ยนสถานะของ <b>${username}</b> หรือไม่?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: color,
+        confirmButtonText: `ยืนยัน ${actionText}`,
+        cancelButtonText: 'ยกเลิก',
+        reverseButtons: true,
+        buttonsStyling: false,
+        customClass: {
+            container: 'font-sans',
+            popup: 'rounded-2xl shadow-2xl border border-slate-100',
+            title: 'text-xl font-bold text-slate-800',
+            htmlContainer: 'text-slate-600',
+            actions: 'gap-3',
+            confirmButton: `${isDisabled ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30' : 'bg-red-500 hover:bg-red-600 shadow-red-500/30'} text-white font-medium py-2.5 px-5 rounded-lg shadow-lg transition-all duration-200`,
+            cancelButton: 'bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-5 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/users/toggle-status';
+            
+            const inputDn = document.createElement('input');
+            inputDn.type = 'hidden'; inputDn.name = 'dn'; inputDn.value = dn;
+            
+            const inputUac = document.createElement('input');
+            inputUac.type = 'hidden'; inputUac.name = 'currentUac'; inputUac.value = currentUac;
+
+            form.appendChild(inputDn);
+            form.appendChild(inputUac);
+            document.body.appendChild(form);
+
+            Swal.fire({
+                title: 'กำลังดำเนินการ...',
+                html: 'กรุณารอสักครู่ ระบบกำลังติดต่อ AD Server',
+                timerProgressBar: true,
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); },
+                customClass: { popup: 'rounded-2xl shadow-xl font-sans' }
+            });
+
+            form.submit();
+        }
+    });
+}
+
+// ----------------------------------------------------------------------------
+// ฟังก์ชันสลับการแสดงรหัสผ่านใน Popup
 // ----------------------------------------------------------------------------
 function toggleSwalPassword() {
     const passwordInput = document.getElementById('swalPasswordInput');
@@ -118,7 +163,7 @@ function toggleSwalPassword() {
 }
 
 // ----------------------------------------------------------------------------
-// ✅ ฟังก์ชัน Popup รีเซ็ตรหัสผ่าน (Reset Password) 🔑 (แบบมีปุ่มลูกตา)
+// ฟังก์ชัน Popup รีเซ็ตรหัสผ่าน (Reset Password)
 // ----------------------------------------------------------------------------
 async function promptResetPassword(dn, username) {
     const { value: newPassword } = await Swal.fire({
@@ -143,7 +188,7 @@ async function promptResetPassword(dn, username) {
                 <div class="relative">
                     <input type="password" id="swalPasswordInput" 
                         class="w-full pl-4 pr-12 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 outline-none transition text-center text-lg tracking-widest font-medium text-slate-700" 
-                        placeholder="P@ssw0rd1234">
+                        placeholder="ตั้งรหัสผ่านใหม่...">
                     
                     <button type="button" onclick="toggleSwalPassword()" 
                         class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition outline-none cursor-pointer" 
@@ -167,18 +212,15 @@ async function promptResetPassword(dn, username) {
             confirmButton: 'bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-lg hover:shadow-yellow-500/30 transition-all ml-2',
             cancelButton: 'bg-white hover:bg-slate-50 text-slate-700 font-medium py-2.5 px-5 rounded-lg border border-slate-200 hover:border-slate-300 transition-all'
         },
-        // ดักจับ Event ตอนเปิด Popup
         didOpen: () => {
             const input = document.getElementById('swalPasswordInput');
             if(input) {
                 input.focus();
-                // กด Enter เพื่อ Submit
                 input.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') Swal.clickConfirm();
                 });
             }
         },
-        // ดึงค่าและตรวจสอบก่อนปิด Popup
         preConfirm: () => {
             const password = document.getElementById('swalPasswordInput').value;
             if (!password || password.length < 8) {
@@ -195,14 +237,10 @@ async function promptResetPassword(dn, username) {
         form.action = '/users/reset-password';
 
         const inputDN = document.createElement('input');
-        inputDN.type = 'hidden';
-        inputDN.name = 'dn';
-        inputDN.value = dn;
+        inputDN.type = 'hidden'; inputDN.name = 'dn'; inputDN.value = dn;
 
         const inputPass = document.createElement('input');
-        inputPass.type = 'hidden';
-        inputPass.name = 'newPassword';
-        inputPass.value = newPassword;
+        inputPass.type = 'hidden'; inputPass.name = 'newPassword'; inputPass.value = newPassword;
 
         form.appendChild(inputDN);
         form.appendChild(inputPass);
