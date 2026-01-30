@@ -6,7 +6,7 @@ services:
     container_name: it-admin-portal
     restart: always
     ports:
-      - "3001:3001"                # 🟢 เปิด Port 3001 (เข้าผ่าน http://dev.biccorp.com:3001 ไม่ได้ ต้องผ่าน Tunnel หรือแก้ Nginx)
+      - "3001:3001"
     environment:
       - PORT=3001
       - AD_URL=ldap://samba-ad
@@ -22,4 +22,4 @@ services:
 networks:
   app-network:
     external: true
-    name: it-log-app_app-network   # ✅ เชื่อม Network เดียวกันกับ Samba
+    name: app-network # ✅ เปลี่ยนชื่อให้เป็นชื่อกลาง (อย่าลืมสร้าง network นี้ด้วยคำสั่ง docker network create app-network)

@@ -258,3 +258,29 @@ async function promptResetPassword(dn, username) {
         form.submit();
     }
 }
+
+
+function confirmUnlock(dn, username) {
+    Swal.fire({
+        title: 'ปลดล็อกบัญชี?',
+        html: `บัญชีของ <b>${username}</b> กำลังถูกล็อกเนื่องจากใส่รหัสผิดเกินกำหนด <br>คุณต้องการปลดล็อกหรือไม่?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b', // สีส้ม amber
+        confirmButtonText: 'ใช่, ปลดล็อกเลย',
+        cancelButtonText: 'ยกเลิก'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/users/unlock';
+            
+            const inputDn = document.createElement('input');
+            inputDn.type = 'hidden'; inputDn.name = 'dn'; inputDn.value = dn;
+
+            form.appendChild(inputDn);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
+}

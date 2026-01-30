@@ -64,3 +64,8 @@ exports.isNonResetableAccount = (identifier) => {
 exports.isAccountDisabled = (uac) => {
     return (parseInt(uac) & 2) > 0;
 };
+
+// 7. ✅ เช็คว่า Account ถูก Lock อยู่หรือไม่ (ถ้าค่ามากกว่า 0 แสดงว่าถูกล็อก)
+exports.isAccountLocked = (lockoutTime) => {
+    return lockoutTime && parseInt(lockoutTime) > 0;
+};

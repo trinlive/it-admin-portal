@@ -13,6 +13,7 @@ router.get('/edit/:username', userController.getEditPage);
 router.post('/users/update', userController.updateUser);
 router.post('/users/reset-password', userController.resetPassword);
 router.post('/users/toggle-status', userController.toggleUserStatus);
+router.post('/users/unlock', userController.unlockUser);
 
 // Group Routes (เรียกใช้จาก groupController)
 router.get('/groups/:username', groupController.getManageGroupsPage);

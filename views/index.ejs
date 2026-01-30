@@ -70,8 +70,7 @@
                                 <th class="py-3 px-4 w-[12%]">Username</th>
                                 <th class="py-3 px-4 w-[18%]">ชื่อ-นามสกุล</th>
                                 <th class="py-3 px-4 w-[15%]">อีเมล</th>
-                                <th class="py-3 px-4 w-[8%] text-center">Status</th>
-                                <th class="py-3 px-4 w-[10%]">แผนก</th>
+                                <th class="py-3 px-4 w-[10%] text-center">Status</th> <th class="py-3 px-4 w-[10%]">แผนก</th>
                                 <th class="py-3 px-4 w-[12%]">ใช้งานล่าสุด</th>
                                 <th class="py-3 px-4 w-[15%]">Groups</th>
                                 <th class="py-3 px-4 text-center w-[10%]">จัดการ</th>
@@ -111,24 +110,35 @@
                                         <td class="py-3 px-4 text-center">
                                             <% 
                                                 const isDisabled = (parseInt(user.userAccountControl) & 2) > 0;
+                                                // ตรวจสอบว่า lockoutTime มีค่ามากกว่า 0 หรือไม่
+                                                const isLocked = (user.lockoutTime && parseInt(user.lockoutTime) > 0); 
                                                 const isSystemAccount = ['Administrator', 'Guest', 'krbtgt'].includes(user.sAMAccountName);
                                             %>
 
-                                            <% if (isSystemAccount) { %>
-                                                <div class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold opacity-60 cursor-not-allowed
-                                                    <%= isDisabled ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-emerald-50 text-emerald-500 border border-emerald-100' %>"
-                                                    title="System Account (Locked)">
-                                                    <i class="fa-solid <%= isDisabled ? 'fa-circle-xmark' : 'fa-circle-check' %> mr-1"></i>
-                                                    <%= isDisabled ? 'Disabled' : 'Active' %>
-                                                </div>
-                                            <% } else { %>
-                                                <button onclick="confirmToggleStatus('<%= user.dn %>', '<%= user.sAMAccountName %>', <%= user.userAccountControl %>, <%= isDisabled %>)"
-                                                    class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold transition-all duration-200 shadow-sm
-                                                    <%= isDisabled ? 'bg-red-100 text-red-700 border border-red-200 hover:bg-red-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200' %>">
-                                                    <i class="fa-solid <%= isDisabled ? 'fa-circle-xmark' : 'fa-circle-check' %> mr-1"></i>
-                                                    <%= isDisabled ? 'Disabled' : 'Active' %>
-                                                </button>
-                                            <% } %>
+                                            <div class="flex flex-col items-center gap-1">
+                                                <% if (isSystemAccount) { %>
+                                                    <div class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold opacity-60 cursor-not-allowed
+                                                        <%= isDisabled ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-emerald-50 text-emerald-500 border border-emerald-100' %>">
+                                                        <i class="fa-solid <%= isDisabled ? 'fa-circle-xmark' : 'fa-circle-check' %> mr-1"></i>
+                                                        <%= isDisabled ? 'Disabled' : 'Active' %>
+                                                    </div>
+                                                <% } else { %>
+                                                    <button onclick="confirmToggleStatus('<%= user.dn %>', '<%= user.sAMAccountName %>', <%= user.userAccountControl %>, <%= isDisabled %>)"
+                                                        class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold transition-all duration-200 shadow-sm
+                                                        <%= isDisabled ? 'bg-red-100 text-red-700 border border-red-200 hover:bg-red-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200' %>">
+                                                        <i class="fa-solid <%= isDisabled ? 'fa-circle-xmark' : 'fa-circle-check' %> mr-1"></i>
+                                                        <%= isDisabled ? 'Disabled' : 'Active' %>
+                                                    </button>
+
+                                                    <% if (isLocked) { %>
+                                                        <button onclick="confirmUnlock('<%= user.dn %>', '<%= user.sAMAccountName %>')"
+                                                            class="mt-1 inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 text-[9px] font-black hover:bg-amber-200 transition-all animate-pulse"
+                                                            title="บัญชีถูกล็อกเนื่องจากใส่รหัสผิด">
+                                                            <i class="fa-solid fa-lock-open mr-1"></i> UNLOCK ACCOUNT
+                                                        </button>
+                                                    <% } %>
+                                                <% } %>
+                                            </div>
                                         </td>
 
                                         <td class="py-3 px-4">
