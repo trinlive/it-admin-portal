@@ -7,15 +7,26 @@
     <title>IT Admin Portal</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 
     <style>
-        body { font-family: 'Sarabun', sans-serif; }
-        body.swal2-shown>[aria-hidden="true"] { transition: 0.1s filter; filter: blur(4px); }
-        .group-more-btn:hover { transform: scale(1.05); background-color: #e2e8f0; }
+        body {
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        body.swal2-shown>[aria-hidden="true"] {
+            transition: 0.1s filter;
+            filter: blur(4px);
+        }
+
+        .group-more-btn:hover {
+            transform: scale(1.05);
+            background-color: #e2e8f0;
+        }
     </style>
 </head>
 
@@ -31,7 +42,8 @@
             </a>
             <div class="flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full border border-slate-700">
                 <span class="relative flex h-2.5 w-2.5">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span
+                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
                 <span class="text-xs text-slate-400 font-medium">System Online</span>
@@ -48,10 +60,18 @@
                     <i class="fa-brands fa-windows text-blue-500"></i> Active Directory Management
                 </p>
             </div>
-            <a href="/create" class="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white transition-all duration-200 bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg hover:shadow-emerald-500/30">
-                <i class="fa-solid fa-user-plus mr-2 group-hover:scale-110 transition-transform"></i>
-                สร้าง User ใหม่
-            </a>
+            
+            <div class="flex gap-3">
+                <a href="/logs" class="group relative inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-slate-800 shadow-sm">
+                    <i class="fa-solid fa-clock-rotate-left mr-2 text-slate-400 group-hover:text-indigo-500 transition-colors"></i>
+                    ดูประวัติ Log
+                </a>
+
+                <a href="/create" class="group relative inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-white transition-all duration-200 bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg hover:shadow-emerald-500/30">
+                    <i class="fa-solid fa-user-plus mr-2 group-hover:scale-110 transition-transform"></i>
+                    สร้าง User ใหม่
+                </a>
+            </div>
         </div>
 
         <%- include('filter') %>
@@ -72,11 +92,11 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-sm">
-                        <% if (users && users.length > 0) { %>
+                        <% if (typeof users !== 'undefined' && users && users.length > 0) { %>
                             <% users.forEach(function(user) { %>
                                 <% 
                                     const isAdmin = (
-                                        user.sAMAccountName === 'Administrator' || 
+                                        user.sAMAccountName === 'Administrator' ||
                                         (user.groupsList && user.groupsList.some(g => {
                                             const lowerGroup = g.toLowerCase();
                                             return lowerGroup.includes('administrators') || lowerGroup.includes('domain admins');
@@ -269,7 +289,7 @@
             </div>
             <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
                 <span><i class="fa-solid fa-server mr-1"></i> Data from Samba AD</span>
-                <span class="font-medium">Total: <span id="footerCount"><%= users ? users.length : 0 %></span> users</span>
+                <span class="font-medium">Total: <span id="footerCount"><%= typeof users !== 'undefined' && users ? users.length : 0 %></span> users</span>
             </div>
         </div>
     </div>

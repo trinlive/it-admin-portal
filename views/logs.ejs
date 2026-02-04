@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Logs - IT Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style> body { font-family: 'Sarabun', sans-serif; } </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <nav class="bg-slate-900 text-white shadow-xl sticky top-0 z-40 border-b border-slate-800">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" class="text-xl font-bold flex items-center gap-3 hover:text-slate-200 transition">
+                <i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก
+            </a>
+            <div class="text-sm font-medium text-slate-400">
+                <i class="fa-solid fa-file-waveform mr-2"></i>System Audit Logs
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        
+        <div class="flex justify-between items-end mb-6">
+            <div>
+                <h3 class="text-3xl font-bold text-slate-800 tracking-tight">บันทึกการใช้งานระบบ</h3>
+                <p class="text-slate-500 mt-1 flex items-center gap-2">
+                    <i class="fa-solid fa-shield-cat text-indigo-500"></i>
+                    ประวัติการทำรายการย้อนหลัง (Audit Trail)
+                </p>
+            </div>
+        </div>
+
+        <%- include('log_filter') %>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
+                            <th class="py-3 px-4 whitespace-nowrap">เวลา (Time)</th>
+                            <th class="py-3 px-4 whitespace-nowrap">ผู้ทำรายการ (By)</th>
+                            <th class="py-3 px-4 whitespace-nowrap">กิจกรรม (Action)</th>
+                            <th class="py-3 px-4 whitespace-nowrap">เป้าหมาย (Target)</th>
+                            <th class="py-3 px-4 text-center whitespace-nowrap">สถานะ</th>
+                            <th class="py-3 px-4 whitespace-nowrap">รายละเอียด (Details)</th>
+                            <th class="py-3 px-4 text-right whitespace-nowrap">IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-sm">
+                        <% if (typeof logs !== 'undefined' && logs && logs.length > 0) { %>
+                            <% logs.forEach(function(log) { %>
+                                <tr class="hover:bg-slate-50/80 transition duration-150">
+                                    <td class="py-3 px-4 whitespace-nowrap text-slate-500 text-xs">
+                                        <%= new Date(log.createdAt).toLocaleString('th-TH') %>
+                                    </td>
+                                    <td class="py-3 px-4 font-bold text-slate-700">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] shrink-0">
+                                                <i class="fa-solid fa-user-shield"></i>
+                                            </div>
+                                            <span class="truncate max-w-[120px]" title="<%= log.username %>"><%= log.username %></span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 font-medium text-slate-800">
+                                        <%= log.action %>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs font-mono border border-slate-200 inline-block max-w-[150px] truncate" title="<%= log.target %>">
+                                            <%= log.target || '-' %>
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <% if (log.status === 'SUCCESS') { %>
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                                <i class="fa-solid fa-check"></i> SUCCESS
+                                            </span>
+                                        <% } else { %>
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
+                                                <i class="fa-solid fa-xmark"></i> FAILED
+                                            </span>
+                                        <% } %>
+                                    </td>
+                                    <td class="py-3 px-4 text-slate-500 text-xs max-w-[250px] truncate" title="<%= log.details %>">
+                                        <%= log.details || '-' %>
+                                    </td>
+                                    <td class="py-3 px-4 text-right text-slate-400 text-xs font-mono">
+                                        <%= log.ip_address %>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="7" class="py-12 text-center text-slate-400">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="bg-slate-50 p-3 rounded-full mb-2">
+                                            <i class="fa-solid fa-clipboard-list text-2xl text-slate-300"></i>
+                                        </div>
+                                        <span>ไม่พบข้อมูล Log ตามเงื่อนไขที่ระบุ</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+                <span><i class="fa-solid fa-database mr-1"></i> Data from Audit Log DB</span>
+                <span class="font-medium">Showing: <%= typeof logs !== 'undefined' ? logs.length : 0 %> records</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

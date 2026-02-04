@@ -1,7 +1,9 @@
+const { logAction } = require("../services/logger");
 const ActiveDirectory = require("activedirectory2");
 const ldap = require("ldapjs");
 const config = require("../config/ad");
 const { validatePassword } = require("../utils/validator");
+
 
 // ✅ Import Helpers
 const { 
@@ -130,7 +132,11 @@ exports.createUser = (req, res) => {
 
     const client = ldap.createClient({ url: config.url });
     client.bind(config.username, config.password, (err) => {
-        if (err) return renderErrorPopup(res, "เชื่อมต่อ AD ไม่สำเร็จ", err.message);
+        if (err) {
+            // ❌ Log Failed
+            logAction(req, 'Administrator', 'Create User', username, 'FAILED', `Bind Error: ${err.message}`);
+            return renderErrorPopup(res, "เชื่อมต่อ AD ไม่สำเร็จ", err.message);
+        }
         
         const targetContainer = ouDN || `CN=Users,${config.baseDN}`; 
         const newUserDN = `CN=${firstName} ${lastName},${targetContainer}`;
@@ -154,11 +160,17 @@ exports.createUser = (req, res) => {
         client.add(newUserDN, newUser, (err) => {
             client.unbind();
             if (err) {
+                // ❌ Log Failed
+                logAction(req, 'Administrator', 'Create User', username, 'FAILED', err.message);
+
                 if (err.name === 'EntryAlreadyExistsError') {
                     return renderErrorPopup(res, "ชื่อซ้ำ", `User "${username}" มีอยู่แล้ว`);
                 }
                 return renderErrorPopup(res, "สร้าง User ไม่สำเร็จ", err.message);
             }
+            
+            // ✅ Log Success
+            logAction(req, 'Administrator', 'Create User', username, 'SUCCESS', `Created ${newUserDN}`);
             res.redirect("/");
         });
     });
@@ -210,15 +222,26 @@ exports.updateUser = (req, res) => {
 // -----------------------------------------------------------------------------
 exports.deleteUser = (req, res) => {
     const userDN = req.body.dn;
+    // หาชื่อ user คร่าวๆ จาก DN เพื่อเก็บ log (เช่น CN=Somchai)
+    const targetName = userDN.split(',')[0].split('=')[1] || userDN;
+
     if (!userDN) return res.send("Error: Missing DN");
     if (isSystemAccountStrict(userDN)) return renderErrorPopup(res, "ไม่อนุญาต", "ห้ามลบ System Account!");
     
     const client = ldap.createClient({ url: config.url });
     client.bind(config.username, config.password, (err) => {
         if (err) return res.send(`Error: ${err.message}`);
+        
         client.del(userDN, (err) => {
             client.unbind();
-            if (err) return renderErrorPopup(res, "ลบไม่สำเร็จ", err.message);
+            if (err) {
+                // ❌ Log Failed
+                logAction(req, 'Administrator', 'Delete User', targetName, 'FAILED', err.message);
+                return renderErrorPopup(res, "ลบไม่สำเร็จ", err.message);
+            }
+            
+            // ✅ Log Success
+            logAction(req, 'Administrator', 'Delete User', targetName, 'SUCCESS', `Deleted DN: ${userDN}`);
             res.redirect("/");
         });
     });
@@ -281,6 +304,9 @@ exports.unlockUser = (req, res) => {
 
 exports.resetPassword = (req, res) => {
     const { dn, newPassword } = req.body;
+    // หาชื่อ user คร่าวๆ
+    const targetName = dn.split(',')[0].split('=')[1] || dn;
+
     if (!dn || !newPassword) return res.send("Error: Missing Data");
     if (isNonResetableAccount(dn)) return renderErrorPopup(res, "Denied", "System Account");
     
@@ -293,20 +319,26 @@ exports.resetPassword = (req, res) => {
         
         const adPassword = Buffer.from(`"${newPassword}"`, 'utf16le');
         
-        // ✅ แก้ไข Syntax
         const changes = [
             new ldap.Change({ 
                 operation: "replace", 
                 modification: { 
                     type: 'unicodePwd', 
-                    values: [adPassword] // ต้องเป็น Array แม้จะเป็น Buffer
+                    values: [adPassword]
                 } 
             })
         ];
         
         client.modify(dn, changes, (err) => {
             client.unbind();
-            if (err) return renderErrorPopup(res, "Reset Failed", err.message);
+            if (err) {
+                // ❌ Log Failed
+                logAction(req, 'Administrator', 'Reset Password', targetName, 'FAILED', err.message);
+                return renderErrorPopup(res, "Reset Failed", err.message);
+            }
+
+            // ✅ Log Success
+            logAction(req, 'Administrator', 'Reset Password', targetName, 'SUCCESS', 'Password changed');
             res.redirect(req.get('Referrer') || '/');
         });
     });

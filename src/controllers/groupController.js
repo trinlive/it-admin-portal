@@ -1,7 +1,9 @@
+const { logAction } = require("../services/logger");
 const ActiveDirectory = require("activedirectory2");
 const ldap = require("ldapjs"); 
 const config = require("../config/ad");
 const { renderErrorPopup } = require("../utils/responseHelper");
+
 
 const ad = new ActiveDirectory(config);
 
@@ -87,11 +89,14 @@ exports.getManageGroupsPage = (req, res) => {
 exports.addUserToGroup = (req, res) => {
     const { userDN, groupDN } = req.body;
     
+    // ดึงชื่อย่อๆ มาแสดงใน Log
+    const userName = userDN.split(',')[0].split('=')[1] || userDN;
+    const groupName = groupDN.split(',')[0].split('=')[1] || groupDN;
+
     const client = ldap.createClient({ url: config.url });
     client.bind(config.username, config.password, (err) => {
         if (err) return renderErrorPopup(res, "เชื่อมต่อ AD ไม่สำเร็จ", err.message);
 
-        // ✅ แก้ไข: Syntax สำหรับ ldapjs v3 (ต้องระบุ type และ values)
         const change = new ldap.Change({
             operation: 'add',
             modification: {
@@ -104,14 +109,17 @@ exports.addUserToGroup = (req, res) => {
             client.unbind();
             
             if (err) {
-                console.error("Add Group Error:", err);
+                // ❌ Log Failed
+                logAction(req, 'Administrator', 'Add Group Member', groupName, 'FAILED', `Failed to add ${userName}: ${err.message}`);
+
                 if (err.code === 68 || err.message.includes('Already Exists')) {
                     return renderErrorPopup(res, "แจ้งเตือน", "User รายนี้อยู่ในกลุ่มดังกล่าวอยู่แล้ว");
                 }
                 return renderErrorPopup(res, "เพิ่มเข้ากลุ่มไม่สำเร็จ", "อาจติด Permission หรือข้อผิดพลาดอื่น", err.message);
             }
             
-            // Redirect กลับหน้าเดิม (วิธีใหม่ แก้ Deprecation Warning)
+            // ✅ Log Success
+            logAction(req, 'Administrator', 'Add Group Member', groupName, 'SUCCESS', `Added ${userName} to group`);
             res.redirect(req.get('Referrer') || '/');
         });
     });
@@ -122,12 +130,13 @@ exports.addUserToGroup = (req, res) => {
 // -----------------------------------------------------------------------------
 exports.removeUserFromGroup = (req, res) => {
     const { userDN, groupDN } = req.body;
+    const userName = userDN.split(',')[0].split('=')[1] || userDN;
+    const groupName = groupDN.split(',')[0].split('=')[1] || groupDN;
 
     const client = ldap.createClient({ url: config.url });
     client.bind(config.username, config.password, (err) => {
         if (err) return renderErrorPopup(res, "เชื่อมต่อ AD ไม่สำเร็จ", err.message);
 
-        // ✅ แก้ไข: Syntax สำหรับ ldapjs v3
         const change = new ldap.Change({
             operation: 'delete',
             modification: {
@@ -140,11 +149,13 @@ exports.removeUserFromGroup = (req, res) => {
             client.unbind();
 
             if (err) {
-                console.error("Remove Group Error:", err);
+                // ❌ Log Failed
+                logAction(req, 'Administrator', 'Remove Group Member', groupName, 'FAILED', `Failed to remove ${userName}: ${err.message}`);
                 return renderErrorPopup(res, "นำออกจากกลุ่มไม่สำเร็จ", "เกิดข้อผิดพลาดในการลบ", err.message);
             }
             
-            // Redirect กลับหน้าเดิม
+            // ✅ Log Success
+            logAction(req, 'Administrator', 'Remove Group Member', groupName, 'SUCCESS', `Removed ${userName} from group`);
             res.redirect(req.get('Referrer') || '/');
         });
     });
