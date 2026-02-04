@@ -7,7 +7,6 @@ const { validatePassword } = require("../utils/validator");
 const { 
     formatDate, 
     formatLastLogin, 
-    formatGroups, 
     isSystemAccountStrict, 
     isNonResetableAccount
 } = require("../utils/adHelpers");
@@ -18,28 +17,30 @@ const { renderErrorPopup } = require("../utils/responseHelper");
 const ad = new ActiveDirectory(config);
 
 // -----------------------------------------------------------------------------
-// 1. Dashboard & User List (Unlimited Attributes & Safe Search)
+// 1. Dashboard & User List
 // -----------------------------------------------------------------------------
 exports.getDashboard = (req, res) => {
-    // 🔍 1. กำหนด Search Query (ดึงทุก Attribute เพื่อความชัวร์)
+    // 🔍 1. กำหนด Attributes ที่ต้องการให้ครบถ้วน
     const searchOptions = {
         filter: '(sAMAccountName=*)', 
-        scope: 'sub',                 // ค้นหาทั้ง Subtree
-        // ❌ ไม่จำกัด attributes แล้ว เพื่อให้ได้ข้อมูลครบถ้วนที่สุด
-        // attributes: config.attributes.user 
+        scope: 'sub',
+        attributes: [
+            'dn', 'cn', 'sn', 'givenName', 'description', 
+            'sAMAccountName', 'userPrincipalName', 'mail', 
+            'department', 'memberOf', 'whenCreated', 
+            'lastLogon', 'userAccountControl', 'lockoutTime', 'objectClass'
+        ]
     };
 
     console.log("---------------------------------------------------------------");
     console.log("📡 Connecting to AD at:", config.url);
     
-    // 🔍 2. ค้นหาแบบ Deep Search
     ad.find(searchOptions, (err, results) => {
         if (err) {
             console.error("❌ AD Search Error:", JSON.stringify(err));
             return res.render("index", { users: [], error: "Connect Error: " + err.message });
         }
 
-        // 🔍 3. รวมผลลัพธ์
         let foundUsers = [];
         if (results) {
             if (results.users) foundUsers = foundUsers.concat(results.users);
@@ -48,45 +49,42 @@ exports.getDashboard = (req, res) => {
 
         console.log(`📥 Raw Users Found: ${foundUsers.length}`);
 
-        // Debug: ปริ้นท์รายชื่อคนที่หาเจอ
-        if(foundUsers.length > 0) {
-            const names = foundUsers.map(u => u.sAMAccountName).join(", ");
-            console.log("📋 Found Users List:", names);
-        }
-
         let filteredUsers = [];
         if (foundUsers.length > 0) {
-            // ✅ 4. กรองข้อมูล (Safe Filter)
+            // กรอง User
             filteredUsers = foundUsers.filter(u => {
-                // ต้องมีชื่อ Account
                 if (!u.sAMAccountName) return false;
-                
-                // ตัดบัญชีคอมพิวเตอร์ (ลงท้ายด้วย $)
                 if (u.sAMAccountName.endsWith('$')) return false;
-                
-                // ตัดบัญชีระบบเฉพาะ
                 if (u.sAMAccountName === 'krbtgt') return false;
-                
-                // Safe Check: เช็ค objectClass (ถ้ามี)
-                if (u.objectClass) {
-                    const objClassStr = JSON.stringify(u.objectClass);
-                    if (objClassStr.includes('computer')) return false; 
-                }
-                
+                if (u.objectClass && JSON.stringify(u.objectClass).includes('computer')) return false; 
                 return true; 
             });
 
             console.log(`✅ Filtered Users (Displaying): ${filteredUsers.length}`);
 
-            // จัดเรียงตามชื่อ
+            // จัดเรียง
             filteredUsers.sort((a, b) => (a.cn || "").localeCompare(b.cn || ""));
 
-            // จัดรูปแบบวันที่และกลุ่ม
+            // ✅ จัดรูปแบบข้อมูล (Format Data)
             filteredUsers.forEach((u) => {
                 u.simpleDate = formatDate(u.whenCreated);
                 u.lastLoginStr = formatLastLogin(u.lastLogon);
-                // ✅ Safe Check: ถ้าไม่มีกลุ่ม ให้ใส่ Array ว่าง (กัน Error)
-                u.groupsList = formatGroups(u.memberOf || []); 
+
+                // --- 🛠️ Logic จัดการกลุ่ม (memberOf) ---
+                let groupsList = [];
+                if (u.memberOf) {
+                    const rawGroups = Array.isArray(u.memberOf) ? u.memberOf : [u.memberOf];
+                    groupsList = rawGroups.map(dn => {
+                        const match = dn.match(/CN=([^,]+)/i);
+                        return match ? match[1] : dn;
+                    });
+                }
+                u.groupsList = groupsList; 
+                
+                // Debug: ดูว่า trinyah ได้กลุ่มหรือยัง?
+                if (u.sAMAccountName === 'trinyah') {
+                     console.log(`🔍 Debug trinyah: Dept=${u.department}, Groups=${JSON.stringify(u.groupsList)}`);
+                }
             });
         }
         
@@ -99,13 +97,23 @@ exports.getDashboard = (req, res) => {
 // -----------------------------------------------------------------------------
 exports.getCreatePage = (req, res) => {
     const ouFilter = '(objectClass=organizationalUnit)';
-    // ใช้ ad.find เพื่อดึง OU ทั้งหมด
+    console.log("🔍 Searching for OUs...");
+
     ad.find({ filter: ouFilter, scope: 'sub' }, (err, results) => {
+        if (err) {
+            console.error("❌ OU Search Error:", err);
+            return res.render("create", { ous: [] });
+        }
+
         let ous = [];
         if (results && results.other) {
             ous = results.other
                 .map(item => item.dn)
-                .filter(dn => dn.indexOf('OU=') !== -1)
+                .filter(dn => {
+                    if (!dn) return false;
+                    const upperDN = dn.toUpperCase(); 
+                    return upperDN.includes('OU=') && !upperDN.includes('OU=DOMAIN CONTROLLERS');
+                })
                 .sort();
         }
         res.render("create", { ous: ous });
@@ -124,11 +132,8 @@ exports.createUser = (req, res) => {
     client.bind(config.username, config.password, (err) => {
         if (err) return renderErrorPopup(res, "เชื่อมต่อ AD ไม่สำเร็จ", err.message);
         
-        // กำหนดตำแหน่ง (DN)
         const targetContainer = ouDN || `CN=Users,${config.baseDN}`; 
         const newUserDN = `CN=${firstName} ${lastName},${targetContainer}`;
-        
-        // แปลงรหัสผ่านเป็น UTF-16LE ("password")
         const adPassword = Buffer.from(`"${password}"`, 'utf16le');
 
         const newUser = {
@@ -143,7 +148,7 @@ exports.createUser = (req, res) => {
             unicodePwd: adPassword,
             displayName: `${firstName} ${lastName}`,
             description: "Created via IT Admin Portal",
-            userAccountControl: 512 // Enable Account
+            userAccountControl: 512 
         };
 
         client.add(newUserDN, newUser, (err) => {
@@ -160,7 +165,7 @@ exports.createUser = (req, res) => {
 };
 
 // -----------------------------------------------------------------------------
-// 3. Edit & Update User
+// 3. Edit & Update User (จุดที่เกิด Error)
 // -----------------------------------------------------------------------------
 exports.getEditPage = (req, res) => {
     const username = req.params.username;
@@ -181,18 +186,21 @@ exports.updateUser = (req, res) => {
     client.bind(config.username, config.password, (err) => {
         if (err) return res.send(`Error: ${err.message}`);
         
+        // ✅ แก้ไข Syntax ldapjs v3: ต้องมี type และ values
         const changes = [
-            new ldap.Change({ operation: "replace", modification: { givenName: req.body.firstName } }),
-            new ldap.Change({ operation: "replace", modification: { sn: req.body.lastName } }),
-            new ldap.Change({ operation: "replace", modification: { displayName: `${req.body.firstName} ${req.body.lastName}` } }),
-            new ldap.Change({ operation: "replace", modification: { mail: req.body.email } }),
-            new ldap.Change({ operation: "replace", modification: { department: req.body.department } }),
+            new ldap.Change({ operation: "replace", modification: { type: 'givenName', values: [req.body.firstName] } }),
+            new ldap.Change({ operation: "replace", modification: { type: 'sn', values: [req.body.lastName] } }),
+            new ldap.Change({ operation: "replace", modification: { type: 'displayName', values: [`${req.body.firstName} ${req.body.lastName}`] } }),
+            new ldap.Change({ operation: "replace", modification: { type: 'mail', values: [req.body.email] } }),
+            new ldap.Change({ operation: "replace", modification: { type: 'department', values: [req.body.department] } }),
         ];
 
         client.modify(userDN, changes, (err) => {
             client.unbind();
             if (err) return renderErrorPopup(res, "แก้ไขไม่สำเร็จ", err.message);
-            res.redirect("/");
+            
+            // ใช้ Redirect แบบใหม่
+            res.redirect(req.get('Referrer') || '/');
         });
     });
 };
@@ -217,7 +225,7 @@ exports.deleteUser = (req, res) => {
 };
 
 // -----------------------------------------------------------------------------
-// 5. Security & Status Actions
+// 5. Security & Status Actions (จุดที่ต้องแก้ Syntax ด้วย)
 // -----------------------------------------------------------------------------
 exports.toggleUserStatus = (req, res) => {
     const { dn, currentUac } = req.body;
@@ -229,15 +237,19 @@ exports.toggleUserStatus = (req, res) => {
     client.bind(config.username, config.password, (err) => {
         if (err) return renderErrorPopup(res, "Error", err.message);
 
+        // ✅ แก้ไข Syntax
         const change = new ldap.Change({
             operation: 'replace',
-            modification: { userAccountControl: newUacValue.toString() }
+            modification: { 
+                type: 'userAccountControl', 
+                values: [newUacValue.toString()] 
+            }
         });
 
         client.modify(dn, change, (err) => {
             client.unbind();
             if (err) return renderErrorPopup(res, "Update Failed", err.message);
-            res.redirect("/");
+            res.redirect(req.get('Referrer') || '/');
         });
     });
 };
@@ -250,15 +262,19 @@ exports.unlockUser = (req, res) => {
     client.bind(config.username, config.password, (err) => {
         if (err) return renderErrorPopup(res, "Error", err.message);
 
+        // ✅ แก้ไข Syntax
         const change = new ldap.Change({
             operation: 'replace',
-            modification: { lockoutTime: '0' }
+            modification: { 
+                type: 'lockoutTime', 
+                values: ['0'] 
+            }
         });
 
         client.modify(dn, change, (err) => {
             client.unbind();
             if (err) return renderErrorPopup(res, "Unlock Failed", err.message);
-            res.redirect("/");
+            res.redirect(req.get('Referrer') || '/');
         });
     });
 };
@@ -276,12 +292,22 @@ exports.resetPassword = (req, res) => {
         if (err) return res.send(`Error: ${err.message}`);
         
         const adPassword = Buffer.from(`"${newPassword}"`, 'utf16le');
-        const changes = [new ldap.Change({ operation: "replace", modification: { unicodePwd: adPassword } })];
+        
+        // ✅ แก้ไข Syntax
+        const changes = [
+            new ldap.Change({ 
+                operation: "replace", 
+                modification: { 
+                    type: 'unicodePwd', 
+                    values: [adPassword] // ต้องเป็น Array แม้จะเป็น Buffer
+                } 
+            })
+        ];
         
         client.modify(dn, changes, (err) => {
             client.unbind();
             if (err) return renderErrorPopup(res, "Reset Failed", err.message);
-            res.redirect("/");
+            res.redirect(req.get('Referrer') || '/');
         });
     });
 };

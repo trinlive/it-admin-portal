@@ -11,18 +11,14 @@
 
     <style>
         body { font-family: 'Sarabun', sans-serif; }
-        
-        /* ✅ CSS สำหรับสถานะการตรวจสอบรหัสผ่าน */
         .valid-req { color: #059669 !important; font-weight: 700; } 
         .valid-req i { color: #059669 !important; }
-        .valid-req i::before { content: "\f00c"; } /* เปลี่ยนเป็นเครื่องหมายถูก */
-        
+        .valid-req i::before { content: "\f00c"; } 
         .invalid-req { color: #94a3b8; }
         .invalid-req i { color: #cbd5e1; }
-        
         .error-req { color: #ef4444 !important; font-weight: 700; }
         .error-req i { color: #ef4444 !important; }
-        .error-req i::before { content: "\f00d"; } /* เปลี่ยนเป็นเครื่องหมายกากบาท */
+        .error-req i::before { content: "\f00d"; } 
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -95,6 +91,33 @@
                             </div>
                         </div>
 
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">
+                                จัดเก็บในหน่วยงาน (OU Location) <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative group">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 group-focus-within:text-emerald-600 transition">
+                                    <i class="fa-solid fa-sitemap"></i>
+                                </span>
+                                <select name="ouDN" class="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white focus:bg-white appearance-none cursor-pointer text-sm font-medium">
+                                    <option value="">-- ค่าเริ่มต้น (Users Default) --</option>
+                                    
+                                    <% if (typeof ous !== 'undefined' && ous.length > 0) { %>
+                                        <% ous.forEach(function(ou) { %>
+                                            <option value="<%= ou %>"><%= ou.split(',')[0].replace('OU=', '') %></option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                                
+                                <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2 ml-1 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-info text-emerald-500"></i> เลือกแผนกใน AD ที่ต้องการจัดเก็บ User นี้
+                            </p>
+                        </div>
+
                         <div class="pt-2 border-t border-slate-100 mt-4">
                             <label class="block text-sm font-bold text-slate-800 mb-2 mt-4">กำหนดรหัสผ่าน <span class="text-red-500">*</span></label>
                             
@@ -103,11 +126,19 @@
                                     <div class="relative">
                                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-key"></i></span>
                                         <input type="password" name="password" id="passwordInput" required onkeyup="checkPassword()" placeholder="ตั้งรหัสผ่าน..."
-                                            class="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-slate-50 focus:bg-white font-medium">
+                                            class="w-full pl-10 pr-24 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition bg-slate-50 focus:bg-white font-medium">
                                         
-                                        <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition outline-none">
-                                            <i class="fa-regular fa-eye" id="eyeIcon"></i>
-                                        </button>
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center gap-2">
+                                            <button type="button" onclick="generatePassword()" class="text-slate-400 hover:text-indigo-600 transition outline-none p-1" title="สุ่มรหัสผ่านอัตโนมัติ">
+                                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                            </button>
+                                            
+                                            <span class="w-px h-4 bg-slate-300"></span>
+
+                                            <button type="button" onclick="togglePassword()" class="text-slate-400 hover:text-slate-600 transition outline-none p-1">
+                                                <i class="fa-regular fa-eye" id="eyeIcon"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <p class="text-xs text-slate-400 mt-2 ml-1"><i class="fa-solid fa-circle-info mr-1"></i> ใช้สำหรับ Login ครั้งแรก</p>
                                 </div>
@@ -145,84 +176,7 @@
         </div>
     </div>
 
-    <script>
-        // Toggle Password Visibility
-        function togglePassword() {
-            const passwordInput = document.getElementById('passwordInput');
-            const eyeIcon = document.getElementById('eyeIcon');
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                eyeIcon.classList.remove('fa-eye');
-                eyeIcon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                eyeIcon.classList.remove('fa-eye-slash');
-                eyeIcon.classList.add('fa-eye');
-            }
-        }
-
-        // ✅ ฟังก์ชันตรวจสอบรหัสผ่านแบบ Real-time
-        function checkPassword() {
-            const password = document.getElementById('passwordInput').value;
-            const username = document.getElementById('usernameInput').value.toLowerCase();
-            const submitBtn = document.getElementById('submitBtn');
-
-            // Elements ที่จะเปลี่ยนสี
-            const reqLength = document.getElementById('req-length');
-            const reqComplex = document.getElementById('req-complex');
-            const reqUser = document.getElementById('req-user');
-
-            // 1. ตรวจความยาว (Length Check)
-            const isLengthValid = password.length >= 8;
-            updateStatus(reqLength, isLengthValid);
-
-            // 2. ตรวจความซับซ้อน (Complexity Check)
-            const hasUpper = /[A-Z]/.test(password);
-            const hasLower = /[a-z]/.test(password);
-            const hasNumber = /[0-9]/.test(password);
-            const hasSpecial = /[!@#$%^&*]/.test(password);
-            
-            // ผ่านถ้ามี: ตัวใหญ่ + ตัวเล็ก + (ตัวเลข หรือ อักขระพิเศษ)
-            const isComplexValid = (hasUpper && hasLower && (hasNumber || hasSpecial));
-            updateStatus(reqComplex, isComplexValid);
-
-            // 3. ตรวจชื่อ Username (Containment Check)
-            let isUserValid = true;
-            if (username.length > 2 && password.toLowerCase().includes(username)) {
-                isUserValid = false;
-            }
-            if(password.length === 0) isUserValid = true; // ถ้ายังไม่พิมพ์ถือว่าผ่านไปก่อน
-
-            // Logic พิเศษสำหรับ Username: ถ้าผิดให้แดง (Error), ถ้าถูกให้เขียว
-            if (!isUserValid) {
-                reqUser.className = 'flex items-start gap-2 error-req transition-colors duration-300';
-            } else if (password.length > 0) {
-                reqUser.className = 'flex items-start gap-2 valid-req transition-colors duration-300';
-            } else {
-                reqUser.className = 'flex items-start gap-2 invalid-req transition-colors duration-300';
-            }
-
-            // เปิด/ปิด ปุ่ม Submit
-            if (isLengthValid && isComplexValid && isUserValid) {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('bg-slate-400', 'cursor-not-allowed');
-                submitBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700', 'hover:-translate-y-0.5');
-            } else {
-                submitBtn.disabled = true;
-                submitBtn.classList.add('bg-slate-400', 'cursor-not-allowed');
-                submitBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'hover:-translate-y-0.5');
-            }
-        }
-
-        // Helper Function เปลี่ยนคลาส CSS
-        function updateStatus(element, isValid) {
-            if (isValid) {
-                element.className = 'flex items-start gap-2 valid-req transition-colors duration-300';
-            } else {
-                element.className = 'flex items-start gap-2 invalid-req transition-colors duration-300';
-            }
-        }
-    </script>
+    <script src="/js/createUser.js"></script>
 
 </body>
 </html>

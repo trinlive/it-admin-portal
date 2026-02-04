@@ -6,6 +6,10 @@ const config = {
   baseDN: process.env.AD_BASE_DN,
   username: process.env.AD_USER,
   password: process.env.AD_PASS,
+
+  // ❌ คอมเมนต์ส่วนนี้ออก เพื่อให้ AD ส่งข้อมูลกลับมาให้ครบทุก Attribute
+  // (แก้ปัญหา User บางคนไม่แสดงเพราะขาด Attribute บางตัว)
+  /*
   attributes: {
     user: [
       "dn",
@@ -22,9 +26,10 @@ const config = {
       "memberOf",
       "userAccountControl",
       "lockoutTime",
-      "objectClass" // ✅ เพิ่มบรรทัดนี้ครับ
+      "objectClass"
     ],
   },
+  */
 };
 
 module.exports = config;
