@@ -20,13 +20,12 @@
                 <select id="departmentFilter" onchange="filterTable()"
                     class="block w-full pl-9 pr-8 py-2.5 border border-slate-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none cursor-pointer text-slate-600 font-medium truncate font-sans">
                     <option value="">ทุกแผนก (All Departments)</option>
-                    <% let uniqueDepts=[...new Set(users.map(u=> (u.department || 'Other').trim()))].sort();
-                        uniqueDepts.forEach(dept => {
-                        %>
-                        <option value="<%= dept %>">
-                            <%= dept %>
-                        </option>
+                    <% if (typeof users !== 'undefined') { %>
+                        <% let uniqueDepts=[...new Set(users.map(u=> (u.department || 'Other').trim()))].sort();
+                            uniqueDepts.forEach(dept => { %>
+                            <option value="<%= dept %>"><%= dept %></option>
                         <% }); %>
+                    <% } %>
                 </select>
                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                     <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
@@ -34,20 +33,19 @@
             </div>
         </div>
 
-        <div
-            class="flex items-center gap-3 w-full xl:w-auto justify-between xl:justify-end border-t xl:border-0 border-slate-100 pt-3 xl:pt-0">
+        <div class="flex items-center gap-3 w-full xl:w-auto justify-between xl:justify-end border-t xl:border-0 border-slate-100 pt-3 xl:pt-0">
 
-            <div
-                class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 shadow-sm whitespace-nowrap">
+            <div class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 shadow-sm whitespace-nowrap">
                 <i class="fa-solid fa-users mr-1 text-slate-500"></i>
                 <span id="totalRecordsDisplay">
-                    <%= users.length %>
+                    <%= typeof users !== 'undefined' ? users.length : 0 %>
                 </span> รายการ
             </div>
 
             <div class="h-6 w-px bg-slate-300 mx-1 hidden sm:block"></div>
 
             <div class="flex items-center gap-2">
+                
                 <button onclick="clearFilter()"
                     class="bg-white hover:bg-red-50 text-slate-500 hover:text-red-500 border border-slate-300 hover:border-red-300 rounded-lg shadow-sm transition-all w-9 h-9 flex items-center justify-center shrink-0"
                     title="ล้างตัวกรอง">
@@ -59,6 +57,19 @@
                     title="ดึงข้อมูลล่าสุด">
                     <i class="fa-solid fa-rotate group-hover:animate-spin"></i>
                 </button>
+
+                <a href="/logs"
+                    class="bg-white hover:bg-indigo-600 hover:text-white text-indigo-600 border border-slate-300 hover:border-indigo-600 rounded-lg shadow-sm transition-all w-9 h-9 flex items-center justify-center shrink-0"
+                    title="ดูประวัติ Log">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </a>
+
+                <a href="/create"
+                    class="bg-white hover:bg-emerald-600 hover:text-white text-emerald-600 border border-slate-300 hover:border-emerald-600 rounded-lg shadow-sm transition-all w-9 h-9 flex items-center justify-center shrink-0"
+                    title="สร้าง User ใหม่">
+                    <i class="fa-solid fa-user-plus"></i>
+                </a>
+
             </div>
         </div>
     </div>

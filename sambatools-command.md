@@ -8,7 +8,19 @@ Markdown
 รวมคำสั่งสำหรับจัดการ Samba Active Directory ผ่าน Docker
 **Container Name:** `samba-ad`
 
+## ⚙️ 1. ตรวจสอบ การ Login
+trinyah@bic-dev-it:/var/www/it-admin-portal$ docker exec -it samba-ad samba-tool user show trinyah | grep lastLogon
+lastLogon: 0
+lastLogonTimestamp: 134146675125478930
+trinyah@bic-dev-it:/var/www/it-admin-portal$ docker exec -it samba-ad samba-tool user show trinyah | grep lastLogonTimestamp
+lastLogonTimestamp: 134146675125478930
+trinyah@bic-dev-it:/var/www/it-admin-portal$ 
+
+
 ---
+## ⚙️ 1. ตรวจสอบ Administrator
+trinyah@bic-dev-it:/var/www/it-admin-portal$ docker exec -it samba-ad pdbedit -L -v -u Administrator
+
 
 ## ⚙️ 1. การจัดการ Config & Log (Troubleshooting)
 ใช้เมื่อแก้ไขไฟล์ตั้งค่า หรือต้องการให้ Log แสดงผล
@@ -29,6 +41,8 @@ docker exec -it samba-ad smbcontrol -s /samba/etc/smb.conf all reload-config
 
 Bash
 docker exec -it samba-ad testparm -s /samba/etc/smb.conf
+
+
 👤 2. จัดการผู้ใช้ (User Management)
 ใช้ตรวจสอบข้อมูล เปรียบเทียบกับหน้าเว็บ หรือรีเซ็ตค่าต่างๆ
 

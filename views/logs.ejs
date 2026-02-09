@@ -38,7 +38,7 @@
 
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="w-full text-left border-collapse" id="logTable">
                     <thead>
                         <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
                             <th class="py-3 px-4 whitespace-nowrap">เวลา (Time)</th>
@@ -53,7 +53,7 @@
                     <tbody class="divide-y divide-slate-100 text-sm">
                         <% if (typeof logs !== 'undefined' && logs && logs.length > 0) { %>
                             <% logs.forEach(function(log) { %>
-                                <tr class="hover:bg-slate-50/80 transition duration-150">
+                                <tr class="hover:bg-slate-50/80 transition duration-150 log-row">
                                     <td class="py-3 px-4 whitespace-nowrap text-slate-500 text-xs">
                                         <%= new Date(log.createdAt).toLocaleString('th-TH') %>
                                     </td>
@@ -110,9 +110,37 @@
             
             <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
                 <span><i class="fa-solid fa-database mr-1"></i> Data from Audit Log DB</span>
-                <span class="font-medium">Showing: <%= typeof logs !== 'undefined' ? logs.length : 0 %> records</span>
+                <span class="font-medium">Showing: <span id="logCount"><%= typeof logs !== 'undefined' ? logs.length : 0 %></span> records</span>
             </div>
         </div>
     </div>
+
+    <script>
+        function filterLogs() {
+            var input, filter, table, tr, td, i, txtValue;
+            input = document.getElementById("logSearchInput");
+            filter = input.value.toUpperCase();
+            table = document.getElementById("logTable");
+            tr = table.getElementsByTagName("tr");
+            let count = 0;
+
+            // วนลูปทุกแถว (เริ่มที่ 1 เพื่อข้าม Header)
+            for (i = 1; i < tr.length; i++) {
+                // เอาข้อมูลจากทุกคอลัมน์ในแถวนั้นมาต่อกัน
+                let rowText = tr[i].innerText || tr[i].textContent;
+
+                if (rowText.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                    count++;
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+            
+            // อัปเดตจำนวนรายการที่แสดง
+            document.getElementById("logCount").innerText = count;
+        }
+    </script>
+
 </body>
 </html>

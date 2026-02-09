@@ -4,11 +4,10 @@ const ldap = require("ldapjs");
 const config = require("../config/ad");
 const { validatePassword } = require("../utils/validator");
 
-
 // ✅ Import Helpers
 const { 
     formatDate, 
-    formatLastLogin, 
+    // formatLastLogin, // ไม่ใช้ตัวนี้แล้ว เพราะเราจะคำนวณใหม่ในไฟล์นี้เลย
     isSystemAccountStrict, 
     isNonResetableAccount
 } = require("../utils/adHelpers");
@@ -19,10 +18,19 @@ const { renderErrorPopup } = require("../utils/responseHelper");
 const ad = new ActiveDirectory(config);
 
 // -----------------------------------------------------------------------------
+// 🛠️ Helper Function: แปลงเวลา AD (FileTime) เป็น JS Date
+// -----------------------------------------------------------------------------
+const adDateToJS = (adTime) => {
+    if (!adTime || Number(adTime) === 0) return null;
+    // สูตรแปลง Windows FileTime (100-nanosecond intervals since Jan 1, 1601 UTC)
+    return new Date(Number(adTime) / 10000 - 11644473600000);
+};
+
+// -----------------------------------------------------------------------------
 // 1. Dashboard & User List
 // -----------------------------------------------------------------------------
 exports.getDashboard = (req, res) => {
-    // 🔍 1. กำหนด Attributes ที่ต้องการให้ครบถ้วน
+    // 🔍 1. กำหนด Attributes ที่ต้องการ (✅ เพิ่ม lastLogonTimestamp)
     const searchOptions = {
         filter: '(sAMAccountName=*)', 
         scope: 'sub',
@@ -30,7 +38,8 @@ exports.getDashboard = (req, res) => {
             'dn', 'cn', 'sn', 'givenName', 'description', 
             'sAMAccountName', 'userPrincipalName', 'mail', 
             'department', 'memberOf', 'whenCreated', 
-            'lastLogon', 'userAccountControl', 'lockoutTime', 'objectClass'
+            'lastLogon', 'lastLogonTimestamp', // ✅ เพิ่มตัวนี้สำคัญมาก!
+            'userAccountControl', 'lockoutTime', 'objectClass'
         ]
     };
 
@@ -70,7 +79,29 @@ exports.getDashboard = (req, res) => {
             // ✅ จัดรูปแบบข้อมูล (Format Data)
             filteredUsers.forEach((u) => {
                 u.simpleDate = formatDate(u.whenCreated);
-                u.lastLoginStr = formatLastLogin(u.lastLogon);
+                
+                // --- 🕒 Logic ใหม่: คำนวณเวลาใช้งานล่าสุด ---
+                const lastLogon = u.lastLogon ? Number(u.lastLogon) : 0;
+                const lastTimestamp = u.lastLogonTimestamp ? Number(u.lastLogonTimestamp) : 0;
+                
+                // เลือกค่าที่ "ใหม่กว่า" (มากที่สุด)
+                const bestTime = Math.max(lastLogon, lastTimestamp);
+                
+                u.lastLoginStr = '-'; // ค่าเริ่มต้น
+
+                if (bestTime > 0) {
+                    const dateObj = adDateToJS(bestTime);
+                    if (dateObj) {
+                        // แปลงเป็นรูปแบบไทย: 04.02.69 16:55
+                        const day = String(dateObj.getDate()).padStart(2, '0');
+                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        const year = String(dateObj.getFullYear() + 543).slice(-2); // ปีไทย 2 หลัก
+                        const hour = String(dateObj.getHours()).padStart(2, '0');
+                        const min = String(dateObj.getMinutes()).padStart(2, '0');
+                        
+                        u.lastLoginStr = `${day}.${month}.${year} ${hour}:${min}`;
+                    }
+                }
 
                 // --- 🛠️ Logic จัดการกลุ่ม (memberOf) ---
                 let groupsList = [];
@@ -82,15 +113,15 @@ exports.getDashboard = (req, res) => {
                     });
                 }
                 u.groupsList = groupsList; 
-                
-                // Debug: ดูว่า trinyah ได้กลุ่มหรือยัง?
-                if (u.sAMAccountName === 'trinyah') {
-                     console.log(`🔍 Debug trinyah: Dept=${u.department}, Groups=${JSON.stringify(u.groupsList)}`);
-                }
             });
         }
         
-        res.render("index", { users: filteredUsers, error: null });
+        // ส่ง currentUser ไปด้วยเพื่อให้ Navbar แสดงชื่อ
+        res.render("index", { 
+            users: filteredUsers, 
+            error: null,
+            currentUser: req.session.user 
+        });
     });
 };
 
@@ -133,7 +164,6 @@ exports.createUser = (req, res) => {
     const client = ldap.createClient({ url: config.url });
     client.bind(config.username, config.password, (err) => {
         if (err) {
-            // ❌ Log Failed
             logAction(req, 'Administrator', 'Create User', username, 'FAILED', `Bind Error: ${err.message}`);
             return renderErrorPopup(res, "เชื่อมต่อ AD ไม่สำเร็จ", err.message);
         }
@@ -160,16 +190,13 @@ exports.createUser = (req, res) => {
         client.add(newUserDN, newUser, (err) => {
             client.unbind();
             if (err) {
-                // ❌ Log Failed
                 logAction(req, 'Administrator', 'Create User', username, 'FAILED', err.message);
-
                 if (err.name === 'EntryAlreadyExistsError') {
                     return renderErrorPopup(res, "ชื่อซ้ำ", `User "${username}" มีอยู่แล้ว`);
                 }
                 return renderErrorPopup(res, "สร้าง User ไม่สำเร็จ", err.message);
             }
             
-            // ✅ Log Success
             logAction(req, 'Administrator', 'Create User', username, 'SUCCESS', `Created ${newUserDN}`);
             res.redirect("/");
         });
@@ -177,7 +204,7 @@ exports.createUser = (req, res) => {
 };
 
 // -----------------------------------------------------------------------------
-// 3. Edit & Update User (จุดที่เกิด Error)
+// 3. Edit & Update User
 // -----------------------------------------------------------------------------
 exports.getEditPage = (req, res) => {
     const username = req.params.username;
@@ -198,7 +225,6 @@ exports.updateUser = (req, res) => {
     client.bind(config.username, config.password, (err) => {
         if (err) return res.send(`Error: ${err.message}`);
         
-        // ✅ แก้ไข Syntax ldapjs v3: ต้องมี type และ values
         const changes = [
             new ldap.Change({ operation: "replace", modification: { type: 'givenName', values: [req.body.firstName] } }),
             new ldap.Change({ operation: "replace", modification: { type: 'sn', values: [req.body.lastName] } }),
@@ -210,8 +236,6 @@ exports.updateUser = (req, res) => {
         client.modify(userDN, changes, (err) => {
             client.unbind();
             if (err) return renderErrorPopup(res, "แก้ไขไม่สำเร็จ", err.message);
-            
-            // ใช้ Redirect แบบใหม่
             res.redirect(req.get('Referrer') || '/');
         });
     });
@@ -222,7 +246,6 @@ exports.updateUser = (req, res) => {
 // -----------------------------------------------------------------------------
 exports.deleteUser = (req, res) => {
     const userDN = req.body.dn;
-    // หาชื่อ user คร่าวๆ จาก DN เพื่อเก็บ log (เช่น CN=Somchai)
     const targetName = userDN.split(',')[0].split('=')[1] || userDN;
 
     if (!userDN) return res.send("Error: Missing DN");
@@ -235,12 +258,9 @@ exports.deleteUser = (req, res) => {
         client.del(userDN, (err) => {
             client.unbind();
             if (err) {
-                // ❌ Log Failed
                 logAction(req, 'Administrator', 'Delete User', targetName, 'FAILED', err.message);
                 return renderErrorPopup(res, "ลบไม่สำเร็จ", err.message);
             }
-            
-            // ✅ Log Success
             logAction(req, 'Administrator', 'Delete User', targetName, 'SUCCESS', `Deleted DN: ${userDN}`);
             res.redirect("/");
         });
@@ -248,7 +268,7 @@ exports.deleteUser = (req, res) => {
 };
 
 // -----------------------------------------------------------------------------
-// 5. Security & Status Actions (จุดที่ต้องแก้ Syntax ด้วย)
+// 5. Security & Status Actions
 // -----------------------------------------------------------------------------
 exports.toggleUserStatus = (req, res) => {
     const { dn, currentUac } = req.body;
@@ -260,7 +280,6 @@ exports.toggleUserStatus = (req, res) => {
     client.bind(config.username, config.password, (err) => {
         if (err) return renderErrorPopup(res, "Error", err.message);
 
-        // ✅ แก้ไข Syntax
         const change = new ldap.Change({
             operation: 'replace',
             modification: { 
@@ -285,7 +304,6 @@ exports.unlockUser = (req, res) => {
     client.bind(config.username, config.password, (err) => {
         if (err) return renderErrorPopup(res, "Error", err.message);
 
-        // ✅ แก้ไข Syntax
         const change = new ldap.Change({
             operation: 'replace',
             modification: { 
@@ -304,7 +322,6 @@ exports.unlockUser = (req, res) => {
 
 exports.resetPassword = (req, res) => {
     const { dn, newPassword } = req.body;
-    // หาชื่อ user คร่าวๆ
     const targetName = dn.split(',')[0].split('=')[1] || dn;
 
     if (!dn || !newPassword) return res.send("Error: Missing Data");
@@ -332,12 +349,9 @@ exports.resetPassword = (req, res) => {
         client.modify(dn, changes, (err) => {
             client.unbind();
             if (err) {
-                // ❌ Log Failed
                 logAction(req, 'Administrator', 'Reset Password', targetName, 'FAILED', err.message);
                 return renderErrorPopup(res, "Reset Failed", err.message);
             }
-
-            // ✅ Log Success
             logAction(req, 'Administrator', 'Reset Password', targetName, 'SUCCESS', 'Password changed');
             res.redirect(req.get('Referrer') || '/');
         });

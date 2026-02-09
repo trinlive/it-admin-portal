@@ -8,17 +8,19 @@
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
                     </div>
-                    <input type="text" name="search" value="<%= typeof query !== 'undefined' ? query.search : '' %>"
+                    <input type="text" id="logSearchInput" onkeyup="filterLogs()"
                         class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 transition sm:text-sm" 
-                        placeholder="ค้นหา User, Action, หรือรายละเอียด...">
+                        placeholder="พิมพ์เพื่อกรองข้อมูลในหน้านี้ทันที...">
                 </div>
 
                 <div class="flex gap-2 w-full md:w-auto">
                     <input type="date" name="startDate" value="<%= typeof query !== 'undefined' ? query.startDate : '' %>"
+                        onchange="document.getElementById('filterForm').submit()"
                         class="block w-1/2 md:w-36 px-2 py-2 border border-slate-300 rounded-lg text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm cursor-pointer"
                         title="วันที่เริ่มต้น">
                     <span class="self-center text-slate-400">-</span>
                     <input type="date" name="endDate" value="<%= typeof query !== 'undefined' ? query.endDate : '' %>"
+                        onchange="document.getElementById('filterForm').submit()"
                         class="block w-1/2 md:w-36 px-2 py-2 border border-slate-300 rounded-lg text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm cursor-pointer"
                         title="วันที่สิ้นสุด">
                 </div>
@@ -27,7 +29,7 @@
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fa-solid fa-check-circle text-slate-400"></i>
                     </div>
-                    <select name="status" 
+                    <select name="status" onchange="document.getElementById('filterForm').submit()"
                         class="block w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm appearance-none cursor-pointer text-slate-600 font-medium">
                         <option value="">ทุกสถานะ</option>
                         <option value="SUCCESS" <%= (typeof query !== 'undefined' && query.status === 'SUCCESS') ? 'selected' : '' %>>✅ Success</option>
@@ -42,7 +44,7 @@
                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fa-solid fa-list-ol text-slate-400"></i>
                     </div>
-                    <select name="limit" 
+                    <select name="limit" onchange="document.getElementById('filterForm').submit()"
                         class="block w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm appearance-none cursor-pointer text-slate-600 font-medium">
                         <option value="30" <%= (typeof query !== 'undefined' && query.limit === '30') ? 'selected' : '' %>>30 รายการ</option>
                         <option value="100" <%= (!query || !query.limit || query.limit === '100') ? 'selected' : '' %>>100 รายการ</option>
@@ -56,11 +58,6 @@
             </div>
 
             <div class="flex items-center gap-2 w-full xl:w-auto justify-end pt-3 xl:pt-0 border-t xl:border-0 border-slate-100">
-                <button type="submit" 
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white border border-transparent rounded-lg shadow-sm transition-all h-9 px-4 flex items-center justify-center gap-2 text-sm font-medium">
-                    <i class="fa-solid fa-filter"></i> กรองข้อมูล
-                </button>
-
                 <a href="/logs" 
                     class="bg-white hover:bg-slate-50 text-slate-500 hover:text-red-500 border border-slate-300 hover:border-red-300 rounded-lg shadow-sm transition-all w-9 h-9 flex items-center justify-center shrink-0"
                     title="ล้างตัวกรอง">
