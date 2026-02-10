@@ -1,5 +1,7 @@
 node_modules/
 .env
+it-portal.env
+it-infra.env 
 .DS_Store
 infarpass.md
 log-command.md
