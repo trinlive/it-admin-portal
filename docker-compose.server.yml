@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   it-admin-portal-app:
-    image: ghcr.io/bic-group/it-admin-portal:latest  # หรือ build: . ถ้าใช้ Git
+    build: .
     container_name: it-admin-portal
     restart: always
     environment:
