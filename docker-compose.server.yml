@@ -21,7 +21,7 @@ services:
       - DB_PASS=${DB_PASS}
       
       # 👇 แก้เป็น Domain จริงของเครื่อง Dev
-      - GOOGLE_CALLBACK_URL=https://dev.biccorp.com/auth/google/callback
+      - GOOGLE_CALLBACK_URL=https://it-portal.biccorp.com/auth/google/callback
 
     networks:
       - app-network      # เชื่อมถนนเส้นหลังบ้าน (เจอ DB/AD)
