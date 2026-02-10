@@ -2,30 +2,36 @@ version: '3.8'
 
 services:
   it-admin-portal-app:
-    build: .             # 👈 ให้ Portainer ช่วย Build จาก Source Code ให้เลย
+    image: ghcr.io/bic-group/it-admin-portal:latest  # หรือ build: . ถ้าใช้ Git
     container_name: it-admin-portal
     restart: always
     environment:
       - NODE_ENV=production
       - PORT=3001
       
-      # 👇 เชื่อมต่อหา Stack it-infra (ใช้ชื่อ Container ได้เลย)
+      # 👇 Database (รับค่าจาก Env)
       - DB_HOST=it-log-db
-      - AD_URL=ldap://samba-ad
-      - AD_BASE_DN=DC=ad,DC=biccorp,DC=com
-      
-      # 👇 เดี๋ยวเราไปใส่ค่าจริงใน Portainer (ปลอดภัยกว่า)
-      - AD_USER=Administrator@ad.biccorp.com
-      - AD_PASS=${AD_PASS}
-      - DB_USER=it_admin
+      - DB_DIALECT=mysql
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       
-      # 👇 แก้เป็น Domain จริงของเครื่อง Dev
-      - GOOGLE_CALLBACK_URL=https://it-portal.biccorp.com/auth/google/callback
+      # 👇 AD Config (รับค่าจาก Env)
+      - AD_URL=ldap://samba-ad
+      - AD_BASE_DN=${AD_BASE_DN}
+      - AD_USER=${AD_USER}
+      - AD_PASS=${AD_PASS}
+      
+      # 👇 Google OAuth (ส่วนที่ขาดหายไป! ต้องเติมตรงนี้ครับ)
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      - ALLOWED_EMAILS=${ALLOWED_EMAILS}
+      - SESSION_SECRET=${SESSION_SECRET}
 
     networks:
-      - app-network      # เชื่อมถนนเส้นหลังบ้าน (เจอ DB/AD)
-      - cf-network       # เชื่อมถนนเส้นหน้าบ้าน (เจอ Tunnel)
+      - app-network
+      - cf-network
 
 networks:
   app-network:
