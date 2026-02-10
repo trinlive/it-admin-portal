@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # 1. Main Application (IT Admin Portal)
+  # ---------------------------------------------------------------------------
+  it-admin-portal-app:
+    build: .
+    container_name: it-admin-portal
+    restart: always
+    ports:
+      - "33201:3001"            # เข้าผ่าน http://localhost:33201
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      
+      # 👇 DATABASE CONFIG (Audit Log)
+      - DB_HOST=it-log-db       
+      
+      # 👇 AD CONFIG (ชี้ไปหา Samba ตัวใหม่ด้านล่าง)
+      - AD_URL=ldap://samba-ad  
+      - AD_BASE_DN=DC=ad,DC=biccorp,DC=com
+      # ⚠️ Image ตัวนี้ User หลักคือ "Administrator"
+      # และแนะนำให้ใช้ UPN (Administrator@ad.biccorp.com) เพื่อความชัวร์
+      - AD_USER=Administrator@ad.biccorp.com 
+      # รหัสผ่านต้องตรงกับ ADMIN_PASSWORD ด้านล่าง 👇
+      - AD_PASS=BicCorp@AD2026!
+
+      # 👇 GOOGLE OAUTH CONFIG
+      - GOOGLE_CALLBACK_URL=http://localhost:33201/auth/google/callback
+
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - app-network             
+      - cf-network
+    depends_on:
+      - samba-ad
+
+  # ---------------------------------------------------------------------------
+  # 2. Samba Active Directory (New Image: linuxcrafts)
+  # ---------------------------------------------------------------------------
+  samba-ad:
+    image: linuxcrafts/samba-ad-dc:latest   # 🟢 ใช้ Image ใหม่
+    container_name: samba-ad
+    restart: always
+    cap_add:                                  
+      - SYS_ADMIN                           # ✅ ต้องมี (เพื่อจัดการ Domain)
+    environment:
+      - DNS_DOMAIN=ad.biccorp.com             
+      - ADMIN_PASSWORD=BicCorp@AD2026!      # 🔑 รหัสผ่านหลัก
+      - DNS_FORWARDER=8.8.8.8                 
+      - HOSTNAME=samba-ad                     
+    volumes:
+      # ✅ ตั้งชื่อ Volume ใหม่ (samba_data_new) เพื่อไม่ให้ชนกับของเก่า
+      - samba_data_new:/var/lib/samba            
+    networks:
+      - app-network
+
+# ---------------------------------------------------------------------------
+# Volumes & Networks
+# ---------------------------------------------------------------------------
+volumes:
+  samba_data_new:
+
+networks:
+  app-network:
+    external: true              
+  cf-network:
+    external: true
