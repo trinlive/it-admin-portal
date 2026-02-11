@@ -2,27 +2,30 @@ version: '3.8'
 
 services:
   it-admin-portal-app:
-    # ... (ส่วน Config ด้านบนเหมือนเดิม) ...
-    image: it-admin-portal:latest # (หรือ image ที่คุณ build)
+    # ✅ เพิ่มบรรทัดนี้: เพื่อสั่งให้ Portainer Build Image จาก Source Code ใน GitHub
+    build: .
+    
+    image: it-admin-portal:latest
     container_name: it-admin-portal
     restart: always
     environment:
       - NODE_ENV=production
       - PORT=3001
       
-      # 👇 Config Database & AD (เหมือนเดิม)
+      # 👇 Database Config (รับค่าจาก Portainer Env)
       - DB_HOST=it-log-db
       - DB_DIALECT=mysql
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       
+      # 👇 AD Config (รับค่าจาก Portainer Env)
       - AD_URL=ldap://samba-ad
       - AD_BASE_DN=${AD_BASE_DN}
       - AD_USER=${AD_USER}
       - AD_PASS=${AD_PASS}
       
-      # 👇 Google OAuth (เหมือนเดิม)
+      # 👇 Google OAuth (รับค่าจาก Portainer Env)
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
@@ -36,8 +39,10 @@ services:
 networks:
   app-network:
     external: true
-    name: app-network  # 👈 สำคัญมาก! ต้องใส่บรรทัดนี้เพื่อให้ชี้ไปที่ Network เดียวกับ samba-ad
+    # 👇 ชื่อ Network นี้ต้องตรงกับที่ samba-ad ใช้งานอยู่ (เช็คจาก docker network ls)
+    name: app-network  
   
   cf-network:
     external: true
-    name: cf-network   # (ใส่เพื่อความชัวร์ ให้ตรงกับชื่อใน docker network ls)
+    # 👇 ชื่อ Network สำหรับ Cloudflare Tunnel
+    name: cf-network
