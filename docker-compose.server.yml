@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   it-admin-portal-app:
-    # ✅ เพิ่มบรรทัดนี้: เพื่อสั่งให้ Portainer Build Image จาก Source Code ใน GitHub
+    # ✅ สั่ง Build จาก Source Code
     build: .
     
     image: it-admin-portal:latest
@@ -12,20 +12,20 @@ services:
       - NODE_ENV=production
       - PORT=3001
       
-      # 👇 Database Config (รับค่าจาก Portainer Env)
+      # 👇 Database Config
       - DB_HOST=it-log-db
       - DB_DIALECT=mysql
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       
-      # 👇 AD Config (รับค่าจาก Portainer Env)
+      # 👇 AD Config
       - AD_URL=ldap://samba-ad
       - AD_BASE_DN=${AD_BASE_DN}
       - AD_USER=${AD_USER}
       - AD_PASS=${AD_PASS}
       
-      # 👇 Google OAuth (รับค่าจาก Portainer Env)
+      # 👇 Google OAuth
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
@@ -39,10 +39,10 @@ services:
 networks:
   app-network:
     external: true
-    # 👇 ชื่อ Network นี้ต้องตรงกับที่ samba-ad ใช้งานอยู่ (เช็คจาก docker network ls)
-    name: app-network  
+    # 👇 แก้ตรงนี้ครับ! ให้ตรงกับชื่อ Network จริงของ Database (it-infra_app-network)
+    name: it-infra_app-network
   
   cf-network:
     external: true
-    # 👇 ชื่อ Network สำหรับ Cloudflare Tunnel
+    # 👇 (ถ้า Stack Cloudflare ชื่ออื่น อาจต้องแก้ตรงนี้ด้วย แต่ลองใช้ cf-network ไปก่อนครับ)
     name: cf-network
